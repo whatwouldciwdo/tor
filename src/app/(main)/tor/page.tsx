@@ -4,14 +4,15 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 
 type PageProps = {
-  searchParams?: {
+  searchParams?: Promise<{
     view?: string;
-  };
+  }>;
 };
 
 export default async function TorListPage({ searchParams }: PageProps) {
+  const params = await searchParams;
   const sessionUser = await getCurrentUser();
-  const view = searchParams?.view === "approve" ? "approve" : "mine";
+  const view = params?.view === "approve" ? "approve" : "mine";
 
   const dbUser = await prisma.user.findUnique({
     where: { id: sessionUser.id },
@@ -31,36 +32,65 @@ export default async function TorListPage({ searchParams }: PageProps) {
     torList = await prisma.tor.findMany({
       where: isSuperAdmin
         ? {} // super admin boleh lihat semua
-        : { creatorId: sessionUser.id },
+        : { creatorUserId: sessionUser.id },
       include: {
         bidang: true,
+        creator: {
+          include: {
+            position: true,
+          },
+        },
       },
       orderBy: { createdAt: "desc" },
     });
   } else {
     // === TOR YANG PERLU SAYA APPROVE ===
-    // kalau bukan super admin dan tidak punya positionId → otomatis kosong
     if (!isSuperAdmin && !dbUser?.positionId) {
       torList = [];
     } else {
-      torList = await prisma.tor.findMany({
-        where: isSuperAdmin
-          ? {
-              status: "submitted",
-            }
-          : {
-              status: "submitted",
-              currentStep: {
-                positionId: dbUser!.positionId!,
+      // Ambil workflow steps yang sesuai dengan posisi user
+      const workflows = await prisma.workflow.findMany({
+        include: {
+          steps: {
+            where: isSuperAdmin
+              ? {} // super admin bisa approve semua
+              : { positionId: dbUser!.positionId! },
+          },
+        },
+      });
+
+      // Collect step numbers yang bisa di-approve user ini
+      const approveableStepNumbers = new Set<number>();
+      workflows.forEach((wf) => {
+        wf.steps.forEach((step) => {
+          approveableStepNumbers.add(step.stepNumber);
+        });
+      });
+
+      if (approveableStepNumbers.size > 0 || isSuperAdmin) {
+        torList = await prisma.tor.findMany({
+          where: {
+            statusStage: { not: "DRAFT" },
+            isFinalApproved: false,
+            ...(isSuperAdmin
+              ? {}
+              : {
+                  currentStepNumber: {
+                    in: Array.from(approveableStepNumbers),
+                  },
+                }),
+          },
+          include: {
+            bidang: true,
+            creator: {
+              include: {
+                position: true,
               },
             },
-        include: {
-          bidang: true,
-          currentStep: true,
-          creator: true,
-        },
-        orderBy: { createdAt: "desc" },
-      });
+          },
+          orderBy: { createdAt: "desc" },
+        });
+      }
     }
   }
 
@@ -108,34 +138,34 @@ export default async function TorListPage({ searchParams }: PageProps) {
               className="block p-4 bg-[#333] rounded-lg hover:bg-[#3a3a3a]"
             >
               <div className="text-lg font-medium">
-                {tor.judul ?? "Tanpa Judul"}
+                {tor.title || "Tanpa Judul"}
               </div>
 
-              {/* Info utama beda dikit tergantung view */}
+              {/* Info utama */}
               {view === "mine" ? (
                 <div className="text-sm text-gray-300">
-                  {tor.bidang?.name ?? "-"} — {tor.status}
+                  {tor.bidang?.name ?? "-"} — {tor.statusStage}
                 </div>
               ) : (
                 <div className="text-sm text-gray-300 space-y-0.5">
                   <div>
-                    Bidang: {tor.bidang?.name ?? "-"} — {tor.status}
+                    Bidang: {tor.bidang?.name ?? "-"} — Status: {tor.statusStage}
                   </div>
                   <div>
-                    Step: {tor.currentStep?.label ?? "-"} | Pengusul:{" "}
+                    Step: {tor.currentStepNumber} | Pengusul:{" "}
                     {tor.creator?.name ?? "-"}
                   </div>
                 </div>
               )}
 
               <div className="text-xs text-gray-400">
-                {new Date(tor.createdAt).toLocaleString()}
+                {new Date(tor.createdAt).toLocaleString("id-ID")}
               </div>
             </Link>
           ))}
 
           {torList.length === 0 && (
-            <div className="text-center text-gray-400 text-sm">
+            <div className="text-center text-gray-400 text-sm py-8">
               {view === "mine"
                 ? "Belum ada TOR."
                 : "Belum ada TOR yang menunggu persetujuan Anda."}
