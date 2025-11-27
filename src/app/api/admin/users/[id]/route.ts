@@ -1,0 +1,122 @@
+// src/app/api/admin/users/[id]/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import jwt from "jsonwebtoken";
+import bcrypt from "bcryptjs";
+import { prisma } from "@/lib/prisma";
+
+const JWT_SECRET = process.env.JWT_SECRET!;
+
+function ensureSuperAdmin(req: NextRequest) {
+  const token = req.cookies.get("auth-token")?.value;
+  if (!token) throw new Error("UNAUTHENTICATED");
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as any;
+    if (!decoded.isSuperAdmin) throw new Error("FORBIDDEN");
+    return decoded;
+  } catch {
+    throw new Error("FORBIDDEN");
+  }
+}
+
+type RouteContext = {
+  params: Promise<{ id: string }>;
+};
+
+export async function PUT(req: NextRequest, { params }: RouteContext) {
+  try {
+    ensureSuperAdmin(req);
+
+    const resolvedParams = await params;
+    const id = Number(resolvedParams.id);
+
+    if (Number.isNaN(id)) {
+      return NextResponse.json(
+        { message: "ID user tidak valid." },
+        { status: 400 }
+      );
+    }
+
+    const body = await req.json();
+    const {
+      name,
+      email,
+      positionId,
+      password,
+      isSuperAdmin,
+      isActive,
+    } = body as {
+      name?: string;
+      email?: string;
+      positionId?: number | null;
+      password?: string | null;
+      isSuperAdmin?: boolean;
+      isActive?: boolean;
+    };
+
+    if (!name || !email || !positionId) {
+      return NextResponse.json(
+        { message: "Nama, email, dan jabatan wajib diisi." },
+        { status: 400 }
+      );
+    }
+
+    const dataToUpdate: any = {
+      name,
+      email,
+      positionId: Number(positionId),
+      isSuperAdmin: !!isSuperAdmin,
+      isActive: isActive ?? true,
+    };
+
+    if (password && password.trim().length > 0) {
+      const hashed = await bcrypt.hash(password, 10);
+      dataToUpdate.passwordHash = hashed;
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id },
+      data: dataToUpdate,
+      include: {
+        position: {
+          include: {
+            bidang: true,
+            positionRoles: {
+              include: { role: true },
+            },
+          },
+        },
+      },
+    });
+
+    return NextResponse.json({ user: updatedUser }, { status: 200 });
+  } catch (err: any) {
+    console.error("Update user error:", err);
+
+    if (err.message === "UNAUTHENTICATED") {
+      return NextResponse.json(
+        { message: "Anda belum login." },
+        { status: 401 }
+      );
+    }
+
+    if (err.message === "FORBIDDEN") {
+      return NextResponse.json(
+        { message: "Hanya Super Admin yang boleh mengakses." },
+        { status: 403 }
+      );
+    }
+
+    if (err.code === "P2002") {
+      return NextResponse.json(
+        { message: "Email atau jabatan sudah digunakan user lain." },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json(
+      { message: "Terjadi kesalahan saat mengupdate user." },
+      { status: 500 }
+    );
+  }
+}

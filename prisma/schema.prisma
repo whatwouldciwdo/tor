@@ -1,0 +1,271 @@
+// ---------- CONFIG ----------
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql" // ganti ke "mysql" / "sqlite" kalau DB-mu beda
+  url      = env("DATABASE_URL")
+}
+
+// ---------- ENUMS ----------
+enum TorStatusStage {
+  DRAFT
+  APPROVAL_1
+  APPROVAL_2
+  APPROVAL_3
+  APPROVAL_4
+  APPROVAL_4_1
+  REVISE
+}
+
+enum TorActionType {
+  SUBMIT
+  APPROVE
+  REVISE
+  REJECT
+  EXPORT
+}
+
+// ---------- MODELS ----------
+
+// 1. Bidang
+model Bidang {
+  id        Int        @id @default(autoincrement())
+  name      String
+  code      String?    @unique
+  isActive  Boolean    @default(true)
+
+  positions Position[]
+  workflows Workflow[]
+  tors      Tor[]
+
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+// 2. Positions (Jabatan)
+model Position {
+  id          Int             @id @default(autoincrement())
+  name        String
+  code        String?
+  bidangId    Int?
+  bidang      Bidang?         @relation(fields: [bidangId], references: [id])
+  isGlobal    Boolean         @default(false)
+  levelOrder  Int?
+  isActive    Boolean         @default(true)
+
+  users         User[]
+  positionRoles PositionRole[]
+  workflowSteps WorkflowStep[]
+
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+}
+
+// 3. Users (Pegawai / Akun)
+model User {
+  id           Int                  @id @default(autoincrement())
+  name         String
+  email        String               @unique
+  passwordHash String
+  positionId   Int                  @unique
+  position     Position             @relation(fields: [positionId], references: [id])
+
+  isSuperAdmin Boolean              @default(false)
+  isActive     Boolean              @default(true)
+
+  createdTors       Tor[]               @relation("TorCreator")
+  approvalHistories TorApprovalHistory[] @relation("HistoryActor")
+
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+}
+
+// 4. Roles (Role Sistem)
+model Role {
+  id            Int             @id @default(autoincrement())
+  name          String          @unique
+  description   String?
+
+  positionRoles PositionRole[]
+}
+
+// 5. PositionRoles (mapping Jabatan → Role)
+model PositionRole {
+  positionId Int
+  roleId     Int
+
+  position   Position @relation(fields: [positionId], references: [id])
+  role       Role     @relation(fields: [roleId], references: [id])
+
+  @@id([positionId, roleId])
+}
+
+// 6. Workflows (per Bidang)
+model Workflow {
+  id        Int           @id @default(autoincrement())
+  name      String
+  bidangId  Int           @unique
+  bidang    Bidang        @relation(fields: [bidangId], references: [id])
+
+  isActive  Boolean       @default(true)
+
+  steps     WorkflowStep[]
+
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+}
+
+// 7. WorkflowSteps (Step Approval per Bidang)
+model WorkflowStep {
+  id                 Int           @id @default(autoincrement())
+  workflowId         Int
+  workflow           Workflow      @relation(fields: [workflowId], references: [id])
+
+  stepNumber         Int
+  label              String
+
+  positionId         Int
+  position           Position      @relation(fields: [positionId], references: [id])
+
+  statusStage        TorStatusStage
+  canRevise          Boolean       @default(false)
+  revisionTargetStep Int           @default(0)
+  isLastStep         Boolean       @default(false)
+
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  @@unique([workflowId, stepNumber])
+}
+
+// 8. Tors (Dokumen TOR)
+model Tor {
+  id                Int              @id @default(autoincrement())
+  number            String?          @unique
+  title             String
+  description       String?
+
+  bidangId          Int
+  bidang            Bidang           @relation(fields: [bidangId], references: [id])
+
+  creatorUserId     Int
+  creator           User             @relation("TorCreator", fields: [creatorUserId], references: [id])
+
+  currentStepNumber Int              @default(0)
+  statusStage       TorStatusStage   @default(DRAFT)
+
+  isFinalApproved   Boolean          @default(false)
+  isExported        Boolean          @default(false)
+  exportedAt        DateTime?
+
+  // === TAB 1: INFORMASI UMUM ===
+  creationDate          DateTime?
+  creationYear          Int?
+  budgetType            String?          // "Anggaran Investasi", "Anggaran Operasional"
+  workType              String?          // "Jasa dan Material", "Jasa", "Material"
+  program               String?          // Judul/Program TOR
+  rkaYear               Int?
+  projectStartDate      DateTime?
+  projectEndDate        DateTime?
+  executionYear         Int?
+  materialJasaValue     Decimal?         @db.Decimal(15, 2)
+  budgetCurrency        String?          @default("IDR") // IDR, USD, EUR, etc.
+  budgetAmount          Decimal?         @db.Decimal(18, 2) // Nilai Anggaran
+  coverImage            String?          // URL to cover image
+
+  // === TAB 2: PENDAHULUAN ===
+  introduction          String?          @db.Text
+  background            String?          @db.Text
+  objective             String?          @db.Text
+  scope                 String?          @db.Text
+
+  // === TAB 3: TAHAPAN PEKERJAAN ===
+  duration              Int?
+  durationUnit          String?          // "days", "weeks", "months"
+  technicalSpec         String?          @db.Text
+  generalProvisions     String?          @db.Text
+  deliveryPoint         String?          @db.Text
+  deliveryMechanism     String?          @db.Text
+
+  // === TAB 4: USULAN ===
+  directorProposal      String?          @db.Text
+  fieldDirectorProposal String?          @db.Text
+  vendorRequirements    String?          @db.Text
+  procurementMethod     String?
+  paymentTerms          String?          @db.Text
+  penaltyRules          String?          @db.Text
+  otherRequirements     String?          @db.Text
+
+  // Budget (RAB)
+  subtotal              Decimal?         @db.Decimal(15, 2)
+  ppn                   Decimal?         @db.Decimal(15, 2)
+  pph                   Decimal?         @db.Decimal(15, 2)
+  grandTotal            Decimal?         @db.Decimal(15, 2)
+
+  // === TAB 6: LAMPIRAN ===
+  tpgData               Json?            // Technical Particular & Guarantee
+  itpData               Json?            // Inspection Testing Plan
+  drsData               Json?            // Document Request Sheet
+  pgrsData              Json?            // Performance Guarantee
+
+  // Relations
+  budgetItems           TorBudgetItem[]
+  history               TorApprovalHistory[]
+
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  @@index([bidangId])
+  @@index([currentStepNumber])
+  @@index([statusStage])
+}
+
+// 8.1 TorBudgetItem (Item RAB)
+model TorBudgetItem {
+  id          Int      @id @default(autoincrement())
+  torId       Int
+  tor         Tor      @relation(fields: [torId], references: [id], onDelete: Cascade)
+
+  item        String
+  description String?  @db.Text
+  quantity    Decimal  @db.Decimal(10, 2)
+  unit        String
+  unitPrice   Decimal  @db.Decimal(15, 2)
+  totalPrice  Decimal  @db.Decimal(15, 2)
+
+  orderIndex  Int      @default(0)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([torId])
+}
+
+// 9. TorApprovalHistory (Riwayat Aksi TOR)
+model TorApprovalHistory {
+  id                      Int            @id @default(autoincrement())
+
+  torId                   Int
+  tor                     Tor            @relation(fields: [torId], references: [id])
+
+  stepNumber              Int
+  action                  TorActionType
+
+  fromStatusStage         TorStatusStage?
+  toStatusStage           TorStatusStage
+
+  actedByUserId           Int
+  actedBy                 User          @relation("HistoryActor", fields: [actedByUserId], references: [id])
+
+  actedByNameSnapshot     String
+  actedByPositionSnapshot String
+
+  note                    String?
+
+  createdAt               DateTime       @default(now())
+
+  @@index([torId])
+  @@index([actedByUserId])
+}
