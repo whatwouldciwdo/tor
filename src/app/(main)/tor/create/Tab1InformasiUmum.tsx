@@ -2,8 +2,9 @@
 
 import { TabProps } from "./types";
 
-export default function Tab1InformasiUmum({ formData, onChange }: TabProps) {
+export default function Tab1InformasiUmum({ formData, onChange, isEditing = false }: TabProps) {
   const handleInputChange = (field: string, value: any) => {
+    if (!isEditing) return;
     onChange({ [field]: value });
   };
 
@@ -23,7 +24,8 @@ export default function Tab1InformasiUmum({ formData, onChange }: TabProps) {
             type="date"
             value={formData.creationDate || ""}
             onChange={(e) => handleInputChange("creationDate", e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            disabled={!isEditing}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed"
           />
         </div>
 
@@ -36,7 +38,8 @@ export default function Tab1InformasiUmum({ formData, onChange }: TabProps) {
             type="number"
             value={formData.creationYear || ""}
             onChange={(e) => handleInputChange("creationYear", parseInt(e.target.value))}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            disabled={!isEditing}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed"
           />
         </div>
 
@@ -48,7 +51,8 @@ export default function Tab1InformasiUmum({ formData, onChange }: TabProps) {
           <select
             value={formData.budgetType || ""}
             onChange={(e) => handleInputChange("budgetType", e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            disabled={!isEditing}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed"
           >
             <option value="">Pilih Jenis Anggaran</option>
             <option value="Anggaran Investasi">Anggaran Investasi</option>
@@ -64,7 +68,8 @@ export default function Tab1InformasiUmum({ formData, onChange }: TabProps) {
           <select
             value={formData.workType || ""}
             onChange={(e) => handleInputChange("workType", e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            disabled={!isEditing}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed"
           >
             <option value="">Pilih Jenis Pekerjaan</option>
             <option value="Jasa dan Material">Jasa dan Material</option>
@@ -83,7 +88,8 @@ export default function Tab1InformasiUmum({ formData, onChange }: TabProps) {
             value={formData.program || ""}
             onChange={(e) => handleInputChange("program", e.target.value)}
             placeholder="Masukkan program/judul TOR"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            disabled={!isEditing}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed"
           />
         </div>
 
@@ -96,7 +102,8 @@ export default function Tab1InformasiUmum({ formData, onChange }: TabProps) {
             type="number"
             value={formData.rkaYear || ""}
             onChange={(e) => handleInputChange("rkaYear", parseInt(e.target.value))}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            disabled={!isEditing}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed"
           />
         </div>
 
@@ -112,7 +119,8 @@ export default function Tab1InformasiUmum({ formData, onChange }: TabProps) {
                 value={formData.projectStartDate || ""}
                 onChange={(e) => handleInputChange("projectStartDate", e.target.value)}
                 placeholder="Tanggal Mulai"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                disabled={!isEditing}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed"
               />
             </div>
             <div>
@@ -121,7 +129,8 @@ export default function Tab1InformasiUmum({ formData, onChange }: TabProps) {
                 value={formData.projectEndDate || ""}
                 onChange={(e) => handleInputChange("projectEndDate", e.target.value)}
                 placeholder="Tanggal Selesai"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                disabled={!isEditing}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed"
               />
             </div>
           </div>
@@ -136,7 +145,8 @@ export default function Tab1InformasiUmum({ formData, onChange }: TabProps) {
             type="number"
             value={formData.executionYear || ""}
             onChange={(e) => handleInputChange("executionYear", parseInt(e.target.value))}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            disabled={!isEditing}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed"
           />
         </div>
 
@@ -151,7 +161,8 @@ export default function Tab1InformasiUmum({ formData, onChange }: TabProps) {
               <select
                 value={formData.budgetCurrency || "IDR"}
                 onChange={(e) => handleInputChange("budgetCurrency", e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                disabled={!isEditing}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed"
               >
                 <option value="IDR">IDR (Rupiah)</option>
                 <option value="USD">USD (Dollar)</option>
@@ -166,7 +177,8 @@ export default function Tab1InformasiUmum({ formData, onChange }: TabProps) {
                 value={formData.budgetAmount || ""}
                 onChange={(e) => handleInputChange("budgetAmount", parseFloat(e.target.value))}
                 placeholder="Masukkan jumlah nilai anggaran"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                disabled={!isEditing}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed"
               />
             </div>
           </div>

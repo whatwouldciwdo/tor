@@ -39,14 +39,13 @@ function generateTorNumber(title: string, createdAt: Date): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
-    .substring(0, 30); // Limit length to leave room for timestamp
+    .substring(0, 30);
 
   const day = String(createdAt.getDate()).padStart(2, "0");
   const month = String(createdAt.getMonth() + 1).padStart(2, "0");
   const year = createdAt.getFullYear();
   const dateStr = `${day}${month}${year}`;
   
-  // Add milliseconds to ensure uniqueness
   const ms = String(createdAt.getTime()).slice(-6);
 
   return `${titleSlug}-${dateStr}-${ms}`;
@@ -58,10 +57,15 @@ export async function POST(req: NextRequest) {
     const user = await getCurrentUser(req);
     const body = await req.json();
 
+    console.log("📝 Creating new TOR");
+    console.log("   - Title:", body.title);
+    console.log("   - coverImage:", body.coverImage);
+
     const {
       title,
       description,
       bidangId,
+      coverImage,
       // Tab 1: Informasi Umum
       creationDate,
       creationYear,
@@ -129,6 +133,7 @@ export async function POST(req: NextRequest) {
         description,
         bidangId: finalBidangId,
         creatorUserId: user.id,
+        coverImage,
         // Tab 1
         creationDate: creationDate ? new Date(creationDate) : now,
         creationYear: creationYear || now.getFullYear(),
@@ -199,9 +204,14 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    console.log("✅ TOR created successfully!");
+    console.log("   - ID:", tor.id);
+    console.log("   - Number:", tor.number);
+    console.log("   - coverImage:", tor.coverImage);
+
     return NextResponse.json(tor, { status: 201 });
   } catch (error: any) {
-    console.error("Error creating ToR:", error);
+    console.error("❌ Error creating ToR:", error);
     return NextResponse.json(
       { message: error.message || "Failed to create ToR" },
       { status: 500 }
@@ -235,7 +245,6 @@ export async function GET(req: NextRequest) {
       });
     } else {
       // Get ToRs that need approval from user
-      // TODO: Implement approval logic based on workflow
       tors = [];
     }
 

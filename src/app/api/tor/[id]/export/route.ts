@@ -26,7 +26,8 @@ function parseHtmlToParagraphs(html: string | null): Paragraph[] {
 
   const paragraphs: Paragraph[] = [];
   
-  // Split by paragraphs and list items
+  // Split by paragraphs and list items, keeping the tags for context
+  // We use a simpler split first
   const blocks = html.split(/<\/p>|<\/li>|<br\s*\/?>/i);
   
   for (const block of blocks) {
@@ -35,13 +36,25 @@ function parseHtmlToParagraphs(html: string | null): Paragraph[] {
     const runs: TextRun[] = [];
     let currentText = block;
     
+    // Check if it's a list item
+    const isListItem = /<li[^>]*>/i.test(currentText);
+    
     // Remove opening tags
-    currentText = currentText.replace(/<p[^>]*>|<li[^>]*>/gi, '');
+    currentText = currentText.replace(/<p[^>]*>|<li[^>]*>|<ol[^>]*>|<ul[^>]*>/gi, '');
     
     // Parse formatting
     const parts = currentText.split(/(<\/?(strong|b|em|i)[^>]*>)/gi);
     let isBold = false;
     let isItalic = false;
+    
+    // Add bullet/number for list items (simplified)
+    if (isListItem) {
+      runs.push(new TextRun({
+        text: "• ", // Generic bullet for now, hard to track numbers without full parser
+        font: "Arial",
+        size: 20,
+      }));
+    }
     
     for (let i = 0; i < parts.length; i++) {
       const part = parts[i];
@@ -75,13 +88,72 @@ function parseHtmlToParagraphs(html: string | null): Paragraph[] {
         alignment: AlignmentType.JUSTIFIED,
         spacing: {
           line: 360, // 1.5 spacing
-          after: 200,
+          after: isListItem ? 0 : 200, // No space after list items for compact look
         },
+        indent: isListItem ? { left: 720, hanging: 360 } : undefined, // Indent for list items
       }));
     }
   }
   
   return paragraphs.length > 0 ? paragraphs : [new Paragraph({})];
+}
+
+// Helper function to load image with error handling
+function loadCoverImage(coverImagePath: string | null): {
+  buffer: Buffer | null;
+  type: "jpg" | "png" | "gif" | "bmp";
+  error?: string;
+} {
+  if (!coverImagePath) {
+    return { buffer: null, type: "jpg" };
+  }
+
+  try {
+    // Handle path - remove leading slash if exists
+    let imagePath = coverImagePath.startsWith('/') 
+      ? coverImagePath.slice(1) 
+      : coverImagePath;
+    
+    // Build full path from project root
+    const fullImagePath = path.join(process.cwd(), "public", imagePath);
+    
+    console.log("🖼️  Attempting to load cover image from:", fullImagePath);
+    
+    // Check if file exists
+    if (!fs.existsSync(fullImagePath)) {
+      console.error("❌ Cover image not found at:", fullImagePath);
+      return { 
+        buffer: null, 
+        type: "jpg", 
+        error: "File not found" 
+      };
+    }
+    
+    // Read image file
+    const imageBuffer = fs.readFileSync(fullImagePath);
+    
+    // Detect image type from extension
+    const ext = path.extname(imagePath).toLowerCase();
+    let imageType: "jpg" | "png" | "gif" | "bmp" = "jpg";
+    
+    if (ext === ".png") imageType = "png";
+    else if (ext === ".gif") imageType = "gif";
+    else if (ext === ".bmp") imageType = "bmp";
+    else if (ext === ".jpg" || ext === ".jpeg") imageType = "jpg";
+    
+    console.log("✅ Cover image loaded successfully!");
+    console.log("   - Type:", imageType);
+    console.log("   - Size:", imageBuffer.length, "bytes");
+    
+    return { buffer: imageBuffer, type: imageType };
+  } catch (error) {
+    console.error("❌ Error loading cover image:", error);
+    return { 
+      buffer: null, 
+      type: "jpg", 
+      error: String(error) 
+    };
+  }
 }
 
 export async function GET(
@@ -94,7 +166,6 @@ export async function GET(
 
     const tor = await prisma.tor.findUnique({
       where: { id: torId },
-      // @ts-ignore
       include: {
         bidang: true,
         creator: {
@@ -114,7 +185,11 @@ export async function GET(
       return NextResponse.json({ message: "ToR not found" }, { status: 404 });
     }
 
-    // Read Images (Fixed: logo-pln-horizontal.jpg for main logo)
+    console.log("📄 Exporting TOR:", tor.title);
+    console.log("   - ID:", tor.id);
+    console.log("   - Cover Image Path:", tor.coverImage || "(none)");
+
+    // Read Logo Images
     const plnLogoPath = path.join(process.cwd(), "public", "logo-pln-horizontal.jpg");
     const secondaryLogoPath = path.join(process.cwd(), "public", "image7.png");
     
@@ -123,15 +198,56 @@ export async function GET(
 
     try {
       plnLogoBuffer = fs.readFileSync(plnLogoPath);
+      console.log("✅ PLN Logo loaded");
     } catch (e) {
-      console.error("PLN Logo (logo-pln-horizontal.jpg) not found:", e);
+      console.error("❌ PLN Logo (logo-pln-horizontal.jpg) not found:", e);
     }
 
     try {
       secondaryLogoBuffer = fs.readFileSync(secondaryLogoPath);
+      console.log("✅ Secondary Logo loaded");
     } catch (e) {
-      console.error("Secondary Logo (image7.png) not found:", e);
+      console.error("❌ Secondary Logo (image7.png) not found:", e);
     }
+
+    // Load Cover Image
+    const coverImageResult = loadCoverImage(tor.coverImage);
+
+    // Create Cover Image Paragraphs
+    const coverImageParagraphs = coverImageResult.buffer 
+      ? [
+          new Paragraph({
+            children: [
+              new ImageRun({
+                data: coverImageResult.buffer,
+                transformation: { 
+                  width: 450,  // Width in pixels
+                  height: 300  // Height in pixels
+                },
+                type: coverImageResult.type,
+              }),
+            ],
+            alignment: AlignmentType.CENTER,
+            spacing: { after: 800 },
+          })
+        ]
+      : [
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: coverImageResult.error 
+                  ? "* gambar tidak dapat dimuat" 
+                  : "* gambar hanya ilustrasi",
+                font: "Times New Roman",
+                size: 20,
+                italics: true,
+                color: coverImageResult.error ? "999999" : undefined,
+              }),
+            ],
+            alignment: AlignmentType.CENTER,
+            spacing: { after: 2000 },
+          })
+        ];
 
     // Create Document
     const doc = new Document({
@@ -147,7 +263,7 @@ export async function GET(
                 left: 2268, // ~4cm
               },
             },
-            titlePage: true, // Different first page headers/footers
+            titlePage: true,
           },
           headers: {
             default: new Header({
@@ -184,7 +300,7 @@ export async function GET(
                             }) : new Paragraph(""),
                           ],
                         }),
-                        // Center Text (Dynamic from tor.title)
+                        // Center Text
                         new TableCell({
                           width: { size: 60, type: WidthType.PERCENTAGE },
                           children: [
@@ -193,7 +309,7 @@ export async function GET(
                                 new TextRun({
                                   text: `Term of Reference (TOR) ${tor.title}`,
                                   font: "Arial",
-                                  size: 16, // 8pt
+                                  size: 16,
                                   italics: true,
                                 }),
                               ],
@@ -202,7 +318,7 @@ export async function GET(
                           ],
                           verticalAlign: VerticalAlign.CENTER,
                         }),
-                        // Right Logo (image7.png - secondary logo)
+                        // Right Logo
                         new TableCell({
                           width: { size: 20, type: WidthType.PERCENTAGE },
                           children: [
@@ -235,7 +351,7 @@ export async function GET(
                 new TextRun({
                   text: "TERM OF REFERENCE (TOR)",
                   font: "Times New Roman",
-                  size: 28, // 14pt
+                  size: 28,
                   bold: true,
                 }),
               ],
@@ -249,7 +365,7 @@ export async function GET(
                 new TextRun({
                   text: tor.title,
                   font: "Times New Roman",
-                  size: 40, // 20pt
+                  size: 40,
                   bold: true,
                 }),
               ],
@@ -257,35 +373,10 @@ export async function GET(
               spacing: { after: 800 },
             }),
 
-            // Cover Image or placeholder
-            ...(tor.coverImage ? [
-              new Paragraph({
-                children: [
-                  new ImageRun({
-                    data: fs.readFileSync(path.join(process.cwd(), "public", tor.coverImage.startsWith('/') ? tor.coverImage.slice(1) : tor.coverImage)),
-                    transformation: { width: 400, height: 300 },
-                    type: "jpg",
-                  }),
-                ],
-                alignment: AlignmentType.CENTER,
-                spacing: { after: 800 },
-              })
-            ] : [
-              new Paragraph({
-                children: [
-                  new TextRun({
-                    text: "* gambar hanya ilustrasi",
-                    font: "Times New Roman",
-                    size: 20,
-                    italics: true,
-                  }),
-                ],
-                alignment: AlignmentType.CENTER,
-                spacing: { after: 2000 },
-              })
-            ]),
+            // Cover Image (Fixed!)
+            ...coverImageParagraphs,
 
-            // Spacing to push footer down (approximate)
+            // Spacing
             new Paragraph({ spacing: { before: 2000 } }),
 
             // Bottom Footer Text
@@ -294,7 +385,7 @@ export async function GET(
                 new TextRun({
                   text: "PT PLN INDONESIA POWER",
                   font: "Times New Roman",
-                  size: 24, // 12pt
+                  size: 24,
                   bold: true,
                 }),
               ],
@@ -305,7 +396,7 @@ export async function GET(
                 new TextRun({
                   text: "UBP CILEGON",
                   font: "Times New Roman",
-                  size: 24, // 12pt
+                  size: 24,
                   bold: true,
                 }),
               ],
@@ -316,7 +407,7 @@ export async function GET(
                 new TextRun({
                   text: `TAHUN ${tor.creationYear || new Date().getFullYear()}`,
                   font: "Times New Roman",
-                  size: 24, // 12pt
+                  size: 24,
                   bold: true,
                 }),
               ],
@@ -353,11 +444,10 @@ export async function GET(
                   rows: [
                     new TableRow({
                       children: [
-                        // Left: Logo + Text below it
+                        // Left: Logo + Text
                         new TableCell({
                           width: { size: 80, type: WidthType.PERCENTAGE },
                           children: [
-                            // PLN Logo
                             plnLogoBuffer ? new Paragraph({
                               children: [
                                 new ImageRun({
@@ -368,13 +458,12 @@ export async function GET(
                               ],
                               alignment: AlignmentType.LEFT,
                             }) : new Paragraph(""),
-                            // Text below logo
                             new Paragraph({
                               children: [
                                 new TextRun({
                                   text: `Term of Reference (TOR) ${tor.title}`,
                                   font: "Arial",
-                                  size: 16, // 8pt
+                                  size: 16,
                                   italics: true,
                                 }),
                               ],
@@ -431,7 +520,7 @@ export async function GET(
                 new TextRun({
                   text: "1. PENDAHULUAN",
                   font: "Arial",
-                  size: 20, // 10pt
+                  size: 20,
                   bold: true,
                 }),
               ],
@@ -445,7 +534,7 @@ export async function GET(
                 new TextRun({
                   text: "2. LATAR BELAKANG",
                   font: "Arial",
-                  size: 20, // 10pt
+                  size: 20,
                   bold: true,
                 }),
               ],
@@ -459,7 +548,7 @@ export async function GET(
                 new TextRun({
                   text: "3. TUJUAN",
                   font: "Arial",
-                  size: 20, // 10pt
+                  size: 20,
                   bold: true,
                 }),
               ],
@@ -473,7 +562,7 @@ export async function GET(
                 new TextRun({
                   text: "4. RUANG LINGKUP PEKERJAAN",
                   font: "Arial",
-                  size: 20, // 10pt
+                  size: 20,
                   bold: true,
                 }),
               ],
@@ -487,7 +576,7 @@ export async function GET(
                 new TextRun({
                   text: "5. JANGKA WAKTU PELAKSANAAN",
                   font: "Arial",
-                  size: 20, // 10pt
+                  size: 20,
                   bold: true,
                 }),
               ],
@@ -496,9 +585,11 @@ export async function GET(
             new Paragraph({
               children: [
                 new TextRun({
-                  text: `${tor.duration} ${tor.durationUnit === 'days' ? 'Hari Kalender' : tor.durationUnit === 'weeks' ? 'Minggu' : 'Bulan'}`,
+                  text: tor.duration 
+                    ? `${tor.duration} ${tor.durationUnit === 'days' ? 'Hari Kalender' : tor.durationUnit === 'weeks' ? 'Minggu' : 'Bulan'}`
+                    : '-',
                   font: "Arial",
-                  size: 20, // 10pt
+                  size: 20,
                 }),
               ],
               alignment: AlignmentType.JUSTIFIED,
@@ -511,7 +602,7 @@ export async function GET(
                 new TextRun({
                   text: "6. SPESIFIKASI TEKNIS",
                   font: "Arial",
-                  size: 20, // 10pt
+                  size: 20,
                   bold: true,
                 }),
               ],
@@ -525,7 +616,7 @@ export async function GET(
                 new TextRun({
                   text: "7. RENCANA ANGGARAN BIAYA (RAB)",
                   font: "Arial",
-                  size: 20, // 10pt
+                  size: 20,
                   bold: true,
                 }),
               ],
@@ -600,6 +691,8 @@ export async function GET(
 
     const buffer = await Packer.toBuffer(doc);
 
+    console.log("✅ Document export successful!");
+
     return new NextResponse(buffer as any, {
       headers: {
         "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -607,9 +700,9 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error("Export error:", error);
+    console.error("❌ Export error:", error);
     return NextResponse.json(
-      { message: "Failed to export ToR" },
+      { message: "Failed to export ToR", error: String(error) },
       { status: 500 }
     );
   }

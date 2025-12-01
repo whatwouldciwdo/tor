@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { writeFile } from "fs/promises";
+import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import { v4 as uuidv4 } from "uuid";
+import fs from "fs";
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,6 +16,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate file type
+    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"];
+    if (!allowedTypes.includes(file.type)) {
+      return NextResponse.json(
+        { message: "Invalid file type. Only images are allowed." },
+        { status: 400 }
+      );
+    }
+
+    // Validate file size (max 5MB)
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
+      return NextResponse.json(
+        { message: "File size exceeds 5MB limit" },
+        { status: 400 }
+      );
+    }
+
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
@@ -22,31 +41,32 @@ export async function POST(request: NextRequest) {
     const filename = `${uuidv4()}${path.extname(file.name)}`;
     
     // Save to public/uploads directory
-    // Ensure directory exists first (in a real app)
-    // For now assuming public exists, we might need to create uploads folder
     const uploadDir = path.join(process.cwd(), "public", "uploads");
     
-    // Create dir if not exists
-    try {
-        const fs = require('fs');
-        if (!fs.existsSync(uploadDir)){
-            fs.mkdirSync(uploadDir, { recursive: true });
-        }
-    } catch (e) {
-        console.error("Error creating upload dir", e);
+    // Create directory if not exists
+    if (!fs.existsSync(uploadDir)) {
+      await mkdir(uploadDir, { recursive: true });
+      console.log("📁 Created uploads directory:", uploadDir);
     }
 
     const filepath = path.join(uploadDir, filename);
     await writeFile(filepath, buffer);
+    
+    console.log("✅ File uploaded successfully to:", filepath);
 
-    // Return the URL
-    const url = `/uploads/${filename}`;
+    // Return the URL WITHOUT leading slash
+    const url = `uploads/${filename}`;
 
-    return NextResponse.json({ url });
+    return NextResponse.json({ 
+      url,
+      filename,
+      size: file.size,
+      type: file.type
+    });
   } catch (error) {
-    console.error("Upload error:", error);
+    console.error("❌ Upload error:", error);
     return NextResponse.json(
-      { message: "Upload failed" },
+      { message: "Upload failed", error: String(error) },
       { status: 500 }
     );
   }

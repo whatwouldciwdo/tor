@@ -115,4 +115,5 @@ export interface TabProps {
   formData: TorFormData;
   onChange: (data: Partial<TorFormData>) => void;
   errors?: Record<string, string>;
+  isEditing?: boolean;
 }

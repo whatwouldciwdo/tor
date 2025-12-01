@@ -15,7 +15,17 @@ export default async function TorDetailPage({ params }: PageProps) {
     prisma.tor.findUnique({
       where: { id: parseInt(id) },
       include: {
-        bidang: true,
+        bidang: {
+          include: {
+            workflows: {
+              include: {
+                steps: {
+                  orderBy: { stepNumber: "asc" }
+                }
+              }
+            }
+          }
+        },
         creator: {
           include: {
             position: true,
@@ -23,7 +33,11 @@ export default async function TorDetailPage({ params }: PageProps) {
         },
         history: {
           include: {
-            actedBy: true,
+            actedBy: {
+              include: {
+                position: true,
+              },
+            },
           },
           orderBy: { createdAt: "asc" },
         },
@@ -46,10 +60,17 @@ export default async function TorDetailPage({ params }: PageProps) {
   const canSubmit =
     tor.creatorUserId === sessionUser.id && tor.statusStage === "DRAFT";
 
+  const workflow = tor.bidang?.workflows?.[0];
+  const currentStep = workflow?.steps?.find(
+    (step) => step.stepNumber === tor.currentStepNumber
+  );
+
   const canApprove =
-    tor.statusStage === "APPROVAL_1" &&
+    tor.statusStage !== "DRAFT" &&
+    !tor.isFinalApproved &&
     !!dbUser &&
-    (dbUser.isSuperAdmin || false); // Simplified, can add more logic
+    (dbUser.isSuperAdmin ||
+      (currentStep && dbUser.positionId === currentStep.positionId));
 
   return (
     <div className="min-h-screen bg-[#262626] text-white px-6 py-10">
@@ -57,12 +78,12 @@ export default async function TorDetailPage({ params }: PageProps) {
         <div className="flex justify-between items-center">
           <h1 className="text-xl font-semibold">Detail TOR</h1>
 
-          <a
+          <Link
             href="/tor"
             className="px-3 py-1.5 rounded-lg bg-[#333] text-sm hover:bg-[#404040]"
           >
             &larr; Kembali ke daftar
-          </a>
+          </Link>
         </div>
 
         <div className="space-y-2 bg-[#333] rounded-lg p-4">
@@ -70,19 +91,28 @@ export default async function TorDetailPage({ params }: PageProps) {
             {tor.title || "Tanpa Judul"}
           </div>
           <div className="text-sm text-gray-300">
+            Nomor: {tor.number || "-"}
+          </div>
+          <div className="text-sm text-gray-300">
             Bidang: {tor.bidang?.name ?? "-"}
           </div>
           <div className="text-sm text-gray-300">
-            Dibuat oleh: {tor.creator?.name ?? "-"}
+            Dibuat oleh: {tor.creator?.name ?? "-"} ({tor.creator?.position?.name ?? "-"})
           </div>
           <div className="text-sm text-gray-300">
             Status: <span className="font-medium">{tor.statusStage}</span>
           </div>
           <div className="text-sm text-gray-300">
             Step saat ini: {tor.currentStepNumber}
+            {currentStep && ` - ${currentStep.label}`}
           </div>
+          {tor.isFinalApproved && (
+            <div className="text-sm text-green-400 font-semibold">
+              ✅ TOR sudah disetujui lengkap
+            </div>
+          )}
           <div className="text-xs text-gray-400">
-            Dibuat: {tor.createdAt.toLocaleString()}
+            Dibuat: {new Date(tor.createdAt).toLocaleString("id-ID")}
           </div>
         </div>
 
@@ -102,15 +132,19 @@ export default async function TorDetailPage({ params }: PageProps) {
                 <div className="flex justify-between">
                   <span className="font-medium">{h.action}</span>
                   <span className="text-gray-400">
-                    {h.createdAt.toLocaleString()}
+                    {new Date(h.createdAt).toLocaleString("id-ID")}
                   </span>
                 </div>
                 <div className="text-gray-300">
-                  Status: {h.toStatusStage}
+                  {h.fromStatusStage && `${h.fromStatusStage} → `}
+                  {h.toStatusStage}
                 </div>
                 <div className="text-gray-300">
-                  Oleh: {h.actedBy?.name ?? "-"}
+                  Oleh: {h.actedBy?.name ?? h.actedByNameSnapshot} ({h.actedByPositionSnapshot})
                 </div>
+                {h.note && (
+                  <div className="text-gray-400 italic">{h.note}</div>
+                )}
               </div>
             ))}
           </div>
@@ -127,4 +161,3 @@ export default async function TorDetailPage({ params }: PageProps) {
     </div>
   );
 }
-

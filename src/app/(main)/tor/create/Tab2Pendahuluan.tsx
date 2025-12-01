@@ -1,11 +1,90 @@
 "use client";
 
 import { TabProps } from "./types";
-import RichTextEditor from "./components/RichTextEditor";
+import TiptapEditor from "./components/TiptapEditor";
+import { useState } from "react";
 
-export default function Tab2Pendahuluan({ formData, onChange }: TabProps) {
+export default function Tab2Pendahuluan({ formData, onChange, isEditing = false }: TabProps) {
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
   const handleInputChange = (field: string, value: any) => {
+    if (!isEditing) return; // Prevent changes when not editing
     onChange({ [field]: value });
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadError(null);
+    setUploading(true);
+
+    // Validate file type
+    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"];
+    if (!allowedTypes.includes(file.type)) {
+      setUploadError("Format file tidak valid. Hanya gambar yang diperbolehkan.");
+      setUploading(false);
+      alert("Format file tidak valid. Hanya gambar yang diperbolehkan.");
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
+      setUploadError("Ukuran file melebihi 5MB");
+      setUploading(false);
+      alert("Ukuran file melebihi 5MB");
+      return;
+    }
+
+    const uploadFormData = new FormData();
+    uploadFormData.append("file", file);
+
+    try {
+      console.log("📤 Uploading cover image...");
+      console.log("   - File name:", file.name);
+      console.log("   - File size:", file.size, "bytes");
+      console.log("   - File type:", file.type);
+      
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: uploadFormData,
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Upload failed");
+      }
+
+      const data = await res.json();
+      
+      console.log("✅ Upload successful!");
+      console.log("   - URL:", data.url);
+      console.log("   - Filename:", data.filename);
+      console.log("   - Size:", data.size);
+      console.log("   - Type:", data.type);
+      
+      // Update form data dengan path image (WITHOUT leading slash)
+      handleInputChange("coverImage", data.url);
+      
+      alert("Gambar berhasil diupload!");
+    } catch (error: any) {
+      console.error("❌ Upload error:", error);
+      setUploadError(error.message);
+      alert(`Gagal upload gambar: ${error.message}`);
+    } finally {
+      setUploading(false);
+      // Reset input so same file can be uploaded again if needed
+      e.target.value = "";
+    }
+  };
+
+  const handleRemoveImage = () => {
+    if (confirm("Hapus gambar cover?")) {
+      handleInputChange("coverImage", null);
+      setUploadError(null);
+    }
   };
 
   return (
@@ -24,7 +103,9 @@ export default function Tab2Pendahuluan({ formData, onChange }: TabProps) {
           value={formData.title || ""}
           onChange={(e) => handleInputChange("title", e.target.value)}
           placeholder="Masukkan judul pekerjaan"
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          disabled={!isEditing}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed"
+          required
         />
       </div>
       
@@ -33,86 +114,126 @@ export default function Tab2Pendahuluan({ formData, onChange }: TabProps) {
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Cover Image (Opsional)
         </label>
-        <div className="flex items-center gap-4">
-          <input
-            type="file"
-            accept="image/*"
-            onChange={async (e) => {
-              const file = e.target.files?.[0];
-              if (!file) return;
+        <div className="space-y-3">
+          {/* Upload Input */}
+          <div className="flex items-center gap-3">
+            <input
+              type="file"
+              accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+              onChange={handleImageUpload}
+              disabled={uploading || !isEditing}
+              className="block w-full text-sm text-gray-500 
+                file:mr-4 file:py-2 file:px-4 
+                file:rounded-full file:border-0 
+                file:text-sm file:font-semibold 
+                file:bg-blue-50 file:text-blue-700 
+                hover:file:bg-blue-100
+                disabled:opacity-50 disabled:cursor-not-allowed"
+            />
+            {uploading && (
+              <span className="text-sm text-blue-600">Uploading...</span>
+            )}
+          </div>
 
-              const formData = new FormData();
-              formData.append("file", file);
-
-              try {
-                const res = await fetch("/api/upload", {
-                  method: "POST",
-                  body: formData,
-                });
-                
-                if (!res.ok) throw new Error("Upload failed");
-                
-                const data = await res.json();
-                handleInputChange("coverImage", data.url);
-              } catch (error) {
-                console.error("Upload error:", error);
-                alert("Failed to upload image");
-              }
-            }}
-            className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-          />
-          {formData.coverImage && (
-            <div className="relative w-20 h-20 border rounded overflow-hidden">
-              <img 
-                src={formData.coverImage} 
-                alt="Cover" 
-                className="w-full h-full object-cover"
-              />
-              <button
-                onClick={() => handleInputChange("coverImage", null)}
-                className="absolute top-0 right-0 bg-red-500 text-white p-1 rounded-bl text-xs"
-              >
-                X
-              </button>
+          {/* Upload Error */}
+          {uploadError && (
+            <div className="text-sm text-red-600 bg-red-50 p-2 rounded">
+              ⚠️ {uploadError}
             </div>
           )}
+          
+          {/* Image Preview */}
+          {formData.coverImage && (
+            <div className="space-y-2">
+              <div className="relative inline-block">
+                <div className="border-2 border-gray-300 rounded-lg overflow-hidden bg-gray-50">
+                  <img 
+                    src={`/${formData.coverImage}`}
+                    alt="Cover Preview" 
+                    className="w-40 h-28 object-cover"
+                    onLoad={() => console.log("✅ Image preview loaded successfully")}
+                    onError={(e) => {
+                      console.error("❌ Failed to load image preview:", formData.coverImage);
+                      // Fallback to placeholder
+                      e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='112'%3E%3Crect fill='%23f0f0f0' width='160' height='112'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%23999' font-size='12'%3EImage Error%3C/text%3E%3C/svg%3E";
+                    }}
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={handleRemoveImage}
+                  disabled={!isEditing}
+                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold hover:bg-red-600 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Hapus gambar"
+                >
+                  ×
+                </button>
+              </div>
+              
+              {/* Path Info */}
+              <div className="text-xs space-y-1">
+                <div className="flex items-center gap-2 text-gray-600">
+                  <span className="font-medium">Path:</span>
+                  <code className="bg-gray-100 px-2 py-0.5 rounded">{formData.coverImage}</code>
+                </div>
+                <div className="flex items-center gap-2 text-green-600">
+                  <span>✓</span>
+                  <span>Gambar siap untuk export</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+        
+        {/* Help Text */}
+        <div className="mt-2 space-y-1">
+          <p className="text-xs text-gray-500">
+            Format: JPG, PNG, GIF, WebP | Max: 5MB
+          </p>
+          <p className="text-xs text-gray-500">
+            Gambar akan ditampilkan di cover halaman dokumen TOR
+          </p>
         </div>
       </div>
 
       {/* Pendahuluan */}
-      <RichTextEditor
-        label="Pendahuluan"
-        content={formData.introduction}
-        onChange={(html) => handleInputChange("introduction", html)}
-        placeholder="Jelaskan pendahuluan pekerjaan ini..."
-      />
+<TiptapEditor
+  label="Pendahuluan"
+  content={formData.introduction}
+  onChange={(html) => handleInputChange("introduction", html)}
+  placeholder="Jelaskan pendahuluan pekerjaan ini..."
+  readOnly={!isEditing}
+/>
 
-      {/* Latar Belakang */}
-      <RichTextEditor
-        label="Latar Belakang"
-        required
-        content={formData.background}
-        onChange={(html) => handleInputChange("background", html)}
-        placeholder="Jelaskan latar belakang pekerjaan ini..."
-      />
+{/* Latar Belakang */}
+<TiptapEditor
+  label="Latar Belakang"
+  required
+  content={formData.background}
+  onChange={(html) => handleInputChange("background", html)}
+  placeholder="Jelaskan latar belakang pekerjaan ini..."
+  readOnly={!isEditing}
+/>
 
-      {/* Tujuan */}
-      <RichTextEditor
-        label="Tujuan"
-        required
-        content={formData.objective}
-        onChange={(html) => handleInputChange("objective", html)}
-        placeholder="Jelaskan tujuan dari pekerjaan ini..."
-      />
+{/* Tujuan */}
+<TiptapEditor
+  label="Tujuan"
+  required
+  content={formData.objective}
+  onChange={(html) => handleInputChange("objective", html)}
+  placeholder="Jelaskan tujuan dari pekerjaan ini..."
+  readOnly={!isEditing}
+/>
 
-      {/* Ruang Lingkup */}
-      <RichTextEditor
-        label="Ruang Lingkup Pekerjaan"
-        required
-        content={formData.scope}
-        onChange={(html) => handleInputChange("scope", html)}
-        placeholder="Jelaskan ruang lingkup pekerjaan secara detail..."
-      />
+{/* Ruang Lingkup */}
+<TiptapEditor
+  label="Ruang Lingkup Pekerjaan"
+  required
+  content={formData.scope}
+  onChange={(html) => handleInputChange("scope", html)}
+  placeholder="Jelaskan ruang lingkup pekerjaan secara detail..."
+  readOnly={!isEditing}
+/>
 
       {/* Deskripsi Tambahan */}
       <div>
@@ -124,7 +245,8 @@ export default function Tab2Pendahuluan({ formData, onChange }: TabProps) {
           onChange={(e) => handleInputChange("description", e.target.value)}
           placeholder="Informasi tambahan jika diperlukan"
           rows={3}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          disabled={!isEditing}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed"
         />
       </div>
     </div>

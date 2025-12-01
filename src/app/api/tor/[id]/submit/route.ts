@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { cookies } from "next/headers";
 import jwt from "jsonwebtoken";
 
-const JWT_SECRET = process.env.SECRET!;
+const JWT_SECRET = process.env.JWT_SECRET!;
 
 // Helper to get current user from token
 async function getCurrentUser(req: NextRequest) {

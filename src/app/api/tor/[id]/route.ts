@@ -122,6 +122,7 @@ export async function PUT(req: NextRequest, context: RouteContext) {
     const {
       title,
       description,
+      coverImage,
       // Tab 1: Informasi Umum
       creationDate,
       creationYear,
@@ -174,6 +175,7 @@ export async function PUT(req: NextRequest, context: RouteContext) {
       data: {
         title,
         description,
+        coverImage,
         // Tab 1
         creationDate: creationDate ? new Date(creationDate) : undefined,
         creationYear,
