@@ -84,6 +84,8 @@ export async function POST(req: NextRequest) {
       background,
       objective,
       scope,
+      warranty,
+      acceptanceCriteria,
       // Tab 3: Tahapan Pekerjaan
       duration,
       durationUnit,
@@ -152,6 +154,8 @@ export async function POST(req: NextRequest) {
         background,
         objective,
         scope,
+        warranty,
+        acceptanceCriteria,
         // Tab 3
         duration,
         durationUnit,

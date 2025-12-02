@@ -3,11 +3,12 @@
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import OrderedList from "@tiptap/extension-ordered-list";
+import { Plugin, PluginKey } from 'prosemirror-state';
 import { Table } from "@tiptap/extension-table";
 import { TableRow } from "@tiptap/extension-table-row";
 import { TableCell } from "@tiptap/extension-table-cell";
 import { TableHeader } from "@tiptap/extension-table-header";
-import { Image } from "@tiptap/extension-image";
+import Image from "@tiptap/extension-image";
 import { Link } from "@tiptap/extension-link";
 import { TextAlign } from "@tiptap/extension-text-align";
 import { Underline } from "@tiptap/extension-underline";
@@ -47,13 +48,256 @@ import {
 } from "lucide-react";
 
 interface TiptapEditorProps {
-  content: string;
+  content?: string;  // Made optional to accept undefined from form data
   onChange: (html: string) => void;
   placeholder?: string;
   label?: string;
   required?: boolean;
   readOnly?: boolean;
 }
+
+// ✅ Custom Image extension with base64 paste/drop support AND interactive resize handles
+const CustomImage = Image.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      width: {
+        default: null,
+        parseHTML: element => element.getAttribute('width'),
+        renderHTML: attributes => {
+          if (!attributes.width) return {}; 
+          return { width: attributes.width };
+        },
+      },
+      height: {
+        default: null,
+        parseHTML: element => element.getAttribute('height'),
+        renderHTML: attributes => {
+          if (!attributes.height) return {};
+          return { height: attributes.height };
+        },
+      },
+      style: {
+        default: null,
+        parseHTML: element => element.getAttribute('style'),
+        renderHTML: attributes => {
+          if (!attributes.style) return {};
+          return { style: attributes.style };
+        },
+      },
+    };
+  },
+
+  addNodeView() {
+    return ({ node, editor, getPos }) => {
+      const container = document.createElement('div');
+      container.className = 'image-resize-container';
+      container.style.cssText = 'position: relative; display: inline-block; max-width: 100%;';
+      container.setAttribute('draggable', 'true'); // ✅ Enable drag and drop
+      
+      const img = document.createElement('img');
+      img.src = node.attrs.src;
+      img.alt = node.attrs.alt || '';
+      
+      // Set initial dimensions
+      if (node.attrs.width) {
+        img.style.width = typeof node.attrs.width === 'number' ? `${node.attrs.width}px` : node.attrs.width;
+      }
+      if (node.attrs.height) {
+        img.style.height = typeof node.attrs.height === 'number' ? `${node.attrs.height}px` : node.attrs.height;
+      }
+      
+      img.style.maxWidth = '100%';
+      img.style.height = 'auto';
+      img.style.cursor = 'pointer';
+      img.style.borderRadius = '4px';
+      
+      container.appendChild(img);
+      
+      // Add resize handle
+      const resizeHandle = document.createElement('div');
+      resizeHandle.className = 'image-resize-handle';
+      resizeHandle.style.cssText = `
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        width: 12px;
+        height: 12px;
+        background: #3b82f6;
+        border: 2px solid white;
+        border-radius: 50%;
+        cursor: nwse-resize;
+        opacity: 0;
+        transition: opacity 0.2s;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+      `;
+      container.appendChild(resizeHandle);
+      
+      // Show/hide resize handle on hover
+      container.addEventListener('mouseenter', () => {
+        if (!editor.isEditable) return;
+        resizeHandle.style.opacity = '1';
+      });
+      
+      container.addEventListener('mouseleave', () => {
+        resizeHandle.style.opacity = '0';
+      });
+      
+      // Resize functionality
+      let isResizing = false;
+      let startX = 0;
+      let startWidth = 0;
+      
+      resizeHandle.addEventListener('mousedown', (e) => {
+        if (!editor.isEditable) return;
+        e.preventDefault();
+        e.stopPropagation();
+        
+        isResizing = true;
+        startX = e.clientX;
+        startWidth = img.offsetWidth;
+        
+        resizeHandle.style.opacity = '1';
+        
+        const onMouseMove = (e: MouseEvent) => {
+          if (!isResizing) return;
+          
+          const deltaX = e.clientX - startX;
+          const newWidth = Math.max(100, Math.min(startWidth + deltaX, container.parentElement?.offsetWidth || 1000));
+          
+          img.style.width = `${newWidth}px`;
+        };
+        
+        const onMouseUp = () => {
+          if (!isResizing) return;
+          isResizing = false;
+          
+          // Update node attributes
+          const newWidth = img.offsetWidth;
+          const pos = getPos();
+          if (typeof pos === 'number') {
+            editor.commands.updateAttributes('image', {
+              width: `${newWidth}px`,
+            });
+          }
+          
+          document.removeEventListener('mousemove', onMouseMove);
+          document.removeEventListener('mouseup', onMouseUp);
+        };
+        
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+      });
+      
+      return {
+        dom: container,
+        update: (updatedNode) => {
+          if (updatedNode.type.name !== 'image') return false;
+          
+          img.src = updatedNode.attrs.src;
+          if (updatedNode.attrs.width) {
+            img.style.width = typeof updatedNode.attrs.width === 'number' ? `${updatedNode.attrs.width}px` : updatedNode.attrs.width;
+          }
+          if (updatedNode.attrs.height) {
+            img.style.height = typeof updatedNode.attrs.height === 'number' ? `${updatedNode.attrs.height}px` : updatedNode.attrs.height;
+          }
+          
+          return true;
+        },
+      };
+    };
+  },
+
+  addProseMirrorPlugins() {
+    return [
+      new Plugin({
+        key: new PluginKey('imageHandler'),
+        props: {
+          // Handle paste events
+          handlePaste(view, event) {
+            const items = Array.from(event.clipboardData?.items || []);
+            
+            for (const item of items) {
+              if (item.type.indexOf('image') === 0) {
+                event.preventDefault();
+                
+                const file = item.getAsFile();
+                if (!file) continue;
+
+                const reader = new FileReader();
+                
+                reader.onload = (readerEvent) => {
+                  const base64 = readerEvent.target?.result as string;
+                  
+                  // Insert image with base64 data and default size
+                  const node = view.state.schema.nodes.image.create({
+                    src: base64,
+                    alt: file.name,
+                    width: '600px', // Default width
+                  });
+                  
+                  const transaction = view.state.tr.replaceSelectionWith(node);
+                  view.dispatch(transaction);
+                  
+                  console.log('✅ Image pasted as base64:', file.name, base64.substring(0, 50) + '...');
+                };
+                
+                reader.readAsDataURL(file);
+                return true;
+              }
+            }
+            
+            return false;
+          },
+          
+          // Handle drop events
+          handleDrop(view, event, slice, moved) {
+            if (!moved && event.dataTransfer?.files?.length) {
+              event.preventDefault();
+              
+              const files = Array.from(event.dataTransfer.files);
+              const imageFiles = files.filter(file => file.type.startsWith('image/'));
+              
+              if (imageFiles.length === 0) return false;
+              
+              imageFiles.forEach(file => {
+                const reader = new FileReader();
+                
+                reader.onload = (readerEvent) => {
+                  const base64 = readerEvent.target?.result as string;
+                  
+                  const node = view.state.schema.nodes.image.create({
+                    src: base64,
+                    alt: file.name,
+                    width: '600px', // Default width
+                  });
+                  
+                  const pos = view.posAtCoords({ 
+                    left: event.clientX, 
+                    top: event.clientY 
+                  });
+                  
+                  if (pos) {
+                    const transaction = view.state.tr.insert(pos.pos, node);
+                    view.dispatch(transaction);
+                    
+                    console.log('✅ Image dropped as base64:', file.name, base64.substring(0, 50) + '...');
+                  }
+                };
+                
+                reader.readAsDataURL(file);
+              });
+              
+              return true;
+            }
+            
+            return false;
+          },
+        },
+      }),
+    ];
+  },
+});
 
 // Custom OrderedList extension with listStyleType support
 const CustomOrderedList = OrderedList.extend({
@@ -85,6 +329,7 @@ const CustomOrderedList = OrderedList.extend({
 const MenuBar = ({ editor }: any) => {
   const [showListStyleDropdown, setShowListStyleDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   if (!editor) {
     return null;
@@ -107,11 +352,34 @@ const MenuBar = ({ editor }: any) => {
     };
   }, [showListStyleDropdown]);
 
+  // ✅ NEW: Upload image and convert to base64
   const addImage = useCallback(() => {
-    const url = window.prompt("Enter image URL:");
-    if (url) {
-      editor.chain().focus().setImage({ src: url }).run();
-    }
+    // Trigger file input
+    fileInputRef.current?.click();
+  }, []);
+
+  const handleImageUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    
+    reader.onload = (event) => {
+      const base64 = event.target?.result as string;
+      
+      // Insert image at cursor
+      editor.chain().focus().setImage({ 
+        src: base64, 
+        alt: file.name 
+      }).run();
+      
+      console.log('✅ Image uploaded as base64:', file.name);
+    };
+    
+    reader.readAsDataURL(file);
+    
+    // Reset input so same file can be selected again
+    e.target.value = '';
   }, [editor]);
 
   const setLink = useCallback(() => {
@@ -157,6 +425,15 @@ const MenuBar = ({ editor }: any) => {
 
   return (
     <div className="border-b-2 border-gray-300 bg-gradient-to-b from-gray-50 to-gray-100 p-3 flex flex-wrap gap-2 items-center shadow-sm">
+      {/* Hidden file input for image upload */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleImageUpload}
+        className="hidden"
+      />
+      
       {/* Text Formatting */}
       <div className="flex gap-1 pr-3 border-r-2 border-gray-300">
         <button
@@ -407,7 +684,7 @@ const MenuBar = ({ editor }: any) => {
           type="button"
           onClick={addImage}
           className={getButtonClass()}
-          title="Insert Image"
+          title="Insert Image (Upload or Paste)"
         >
           <ImageIcon size={18} />
         </button>
@@ -589,19 +866,23 @@ export default function TiptapEditor({
           class: "border border-gray-400 p-2",
         },
       }),
-      Image.configure({
+      // ✅ Use CustomImage instead of default Image
+      CustomImage.configure({
         inline: true,
         allowBase64: true,
         HTMLAttributes: {
           class: "max-w-full h-auto rounded my-2",
+          // ✅ Enable resize handles
+          style: "cursor: pointer; max-width: 100%;",
         },
       }),
     ],
     content: content || "",
     onUpdate: ({ editor }) => {
-      if (!readOnly) {
-        onChange(editor.getHTML());
-      }
+      // ✅ CRITICAL FIX: Always call onChange, regardless of readOnly
+      const html = editor.getHTML();
+      console.log('🔄 Editor updated, HTML length:', html.length);
+      onChange(html);
     },
     editorProps: {
       attributes: {
@@ -623,6 +904,7 @@ export default function TiptapEditor({
   // Sync content when prop changes (e.g. after data fetch)
   useEffect(() => {
     if (editor && content && content !== editor.getHTML()) {
+      console.log('📥 Setting content from props, length:', content.length);
       editor.commands.setContent(content);
     }
   }, [editor, content]);
@@ -718,6 +1000,41 @@ export default function TiptapEditor({
         .prose .ProseMirror ol.list-style-upper-roman,
         .ProseMirror ol.list-style-upper-roman {
           list-style-type: upper-roman !important;
+        }
+        
+        /* ✅ Image resize styling */
+        .ProseMirror img {
+          max-width: 100%;
+          height: auto;
+          cursor: pointer;
+          transition: outline 0.2s;
+        }
+        
+        .ProseMirror img:hover {
+          outline: 2px solid #3b82f6;
+          outline-offset: 2px;
+        }
+        
+        .ProseMirror img.ProseMirror-selectednode {
+          outline: 3px solid #3b82f6;
+          outline-offset: 2px;
+        }
+        
+        /* Image selected state - show resize hint */
+        .ProseMirror-selectednode::after {
+          content: '⇔ Drag corner to resize';
+          position: absolute;
+          bottom: -24px;
+          left: 50%;
+          transform: translateX(-50%);
+          background: #3b82f6;
+          color: white;
+          padding: 4px 8px;
+          border-radius: 4px;
+          font-size: 11px;
+          white-space: nowrap;
+          pointer-events: none;
+          z-index: 10;
         }
       `}</style>
       

@@ -180,6 +180,9 @@ model Tor {
   background            String?          @db.Text
   objective             String?          @db.Text
   scope                 String?          @db.Text
+  warranty              String?          @db.Text // Garansi
+  acceptanceCriteria    String?          @db.Text // Kriteria yang diterima
+
 
   // === TAB 3: TAHAPAN PEKERJAAN ===
   duration              Int?

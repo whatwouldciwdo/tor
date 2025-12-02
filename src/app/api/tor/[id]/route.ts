@@ -141,6 +141,8 @@ export async function PUT(req: NextRequest, context: RouteContext) {
       background,
       objective,
       scope,
+      warranty,
+      acceptanceCriteria,
       // Tab 3: Tahapan Pekerjaan
       duration,
       durationUnit,
@@ -194,6 +196,8 @@ export async function PUT(req: NextRequest, context: RouteContext) {
         background,
         objective,
         scope,
+        warranty,
+        acceptanceCriteria,
         // Tab 3
         duration,
         durationUnit,

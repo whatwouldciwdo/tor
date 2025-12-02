@@ -273,3 +273,51 @@ input:disabled, textarea:disabled, select:disabled {
 .tiptap ::selection {
   background-color: #bfdbfe;
 }
+
+/* ADD THIS TO TiptapEditor.tsx global styles */
+
+/* Image resize hint - Alternative approach */
+.ProseMirror img.ProseMirror-selectednode {
+  outline: 3px solid #3b82f6 !important;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+}
+
+/* Hint via data attribute */
+.ProseMirror img.ProseMirror-selectednode[data-resize-hint]::before {
+  content: attr(data-resize-hint);
+  position: absolute;
+  bottom: -30px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #3b82f6;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  white-space: nowrap;
+  z-index: 1000;
+}
+
+/* OR use JavaScript to show tooltip */
+.ProseMirror {
+  position: relative;
+}
+
+.image-resize-tooltip {
+  position: fixed;
+  background: #3b82f6;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  pointer-events: none;
+  z-index: 9999;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  animation: fadeIn 0.2s;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
+}

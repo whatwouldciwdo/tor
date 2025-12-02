@@ -2,7 +2,7 @@
 
 import { saveAs } from "file-saver";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { TorFormData, TabId, Tor } from "./types";
 import Tab1InformasiUmum from "./Tab1InformasiUmum";
@@ -15,7 +15,7 @@ import { Edit, X } from "lucide-react";
 
 interface TorFormLayoutProps {
   torId?: number;
-  initialData?: Tor;
+  initialData?: TorFormData;  // Changed from Tor to TorFormData for better type compatibility
   bidangId?: number;
   bidangName?: string;
   creatorName?: string;
@@ -51,6 +51,8 @@ export default function TorFormLayout({
     background: initialData?.background || "",
     objective: initialData?.objective || "",
     scope: initialData?.scope || "",
+    warranty: initialData?.warranty || "",
+    acceptanceCriteria: initialData?.acceptanceCriteria || "",
     duration: initialData?.duration,
     durationUnit: initialData?.durationUnit || "days",
     technicalSpec: initialData?.technicalSpec || "",
@@ -62,6 +64,7 @@ export default function TorFormLayout({
   const [isSaving, setIsSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [isReloading, setIsReloading] = useState(false);
   
   // Per-tab editing state - Tab1 always editable, Tab2-6 start in view mode
   const [tabEditingState, setTabEditingState] = useState<Record<TabId, boolean>>({
@@ -73,9 +76,12 @@ export default function TorFormLayout({
     "lampiran": false,
   });
 
-  // Set initial dates on client-side only to avoid hydration mismatch
+  // ✅ FIXED: Set initial dates on client-side only - use ref to track initialization
+  const hasInitializedDates = useRef(false);
+  
   useEffect(() => {
-    if (!initialData && !formData.creationDate) {
+    // Only run once when component mounts and dates are empty
+    if (!hasInitializedDates.current && !initialData && !formData.creationDate) {
       const today = new Date().toISOString().split("T")[0];
       const year = new Date().getFullYear();
       setFormData((prev) => ({
@@ -83,37 +89,75 @@ export default function TorFormLayout({
         creationDate: today,
         creationYear: year,
       }));
+      hasInitializedDates.current = true;
     }
-  }, []);
+  }, []); // Empty deps - only run once
 
-  // Auto-save every 30 seconds
-  useEffect(() => {
-    if (!torId) return; // Only auto-save for existing ToR
-
-    const interval = setInterval(() => {
-      handleSave(true);
-    }, 30000);
-
-    return () => clearInterval(interval);
-  }, [formData, torId]);
 
   const handleChange = (data: Partial<TorFormData>) => {
     setFormData((prev) => ({ ...prev, ...data }));
   };
 
-  const handleSave = async (isAutoSave = false) => {
+  // ✅ NEW: Reload data from database
+  const reloadData = useCallback(async () => {
+    if (!torId) return;
+    
+    setIsReloading(true);
+    try {
+      console.log('🔄 Reloading data from database...');
+      const response = await fetch(`/api/tor/${torId}`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to reload data');
+      }
+      
+      const freshData = await response.json();
+      // Update form data with fresh data from database
+      setFormData({
+        title: freshData.title || "",
+        description: freshData.description || "",
+        bidangId: freshData.bidangId,
+        creationDate: freshData.creationDate || "",
+        creationYear: freshData.creationYear || new Date().getFullYear(),
+        budgetType: freshData.budgetType || "",
+        workType: freshData.workType || "",
+        program: freshData.program || "",
+        rkaYear: freshData.rkaYear,
+        projectStartDate: freshData.projectStartDate || "",
+        projectEndDate: freshData.projectEndDate || "",
+        executionYear: freshData.executionYear,
+        materialJasaValue: freshData.materialJasaValue,
+        budgetCurrency: freshData.budgetCurrency || "IDR",
+        budgetAmount: freshData.budgetAmount,
+        coverImage: freshData.coverImage || null,
+        introduction: freshData.introduction || "",
+        background: freshData.background || "",
+        objective: freshData.objective || "",
+        scope: freshData.scope || "",
+        warranty: freshData.warranty || "",
+        acceptanceCriteria: freshData.acceptanceCriteria || "",
+        duration: freshData.duration,
+        durationUnit: freshData.durationUnit || "days",
+        technicalSpec: freshData.technicalSpec || "",
+        generalProvisions: freshData.generalProvisions || "",
+        deliveryPoint: freshData.deliveryPoint || "",
+        deliveryMechanism: freshData.deliveryMechanism || "",
+        budgetItems: freshData.budgetItems || [],
+      });
+    } catch (error: any) {
+      console.error('❌ Reload error:', error);
+      alert('Failed to reload data: ' + error.message);
+    } finally {
+      setIsReloading(false);
+    }
+  }, [torId]);
+
+  const handleSave = useCallback(async (isAutoSave = false) => {
     if (!isAutoSave) setIsSaving(true);
 
     try {
       const url = torId ? `/api/tor/${torId}` : "/api/tor";
       const method = torId ? "PUT" : "POST";
-
-      console.log("💾 Saving TOR...");
-      console.log("   - URL:", url);
-      console.log("   - Method:", method);
-      console.log("   - Title:", formData.title);
-      console.log("   - Introduction (preview):", formData.introduction?.substring(0, 50));
-      console.log("   - coverImage:", formData.coverImage);
 
       const response = await fetch(url, {
         method,
@@ -127,10 +171,40 @@ export default function TorFormLayout({
       }
 
       const savedTor = await response.json();
+      setLastSaved(new Date());
       
-      console.log("✅ TOR saved successfully!");
-      console.log("   - ID:", savedTor.id);
-      console.log("   - coverImage in response:", savedTor.coverImage);
+      // Update form data with saved response to keep state in sync
+      setFormData({
+        title: savedTor.title || "",
+        description: savedTor.description || "",
+        bidangId: savedTor.bidangId,
+        creationDate: savedTor.creationDate || "",
+        creationYear: savedTor.creationYear || new Date().getFullYear(),
+        budgetType: savedTor.budgetType || "",
+        workType: savedTor.workType || "",
+        program: savedTor.program || "",
+        rkaYear: savedTor.rkaYear,
+        projectStartDate: savedTor.projectStartDate || "",
+        projectEndDate: savedTor.projectEndDate || "",
+        executionYear: savedTor.executionYear,
+        materialJasaValue: savedTor.materialJasaValue,
+        budgetCurrency: savedTor.budgetCurrency || "IDR",
+        budgetAmount: savedTor.budgetAmount,
+        coverImage: savedTor.coverImage || null,
+        introduction: savedTor.introduction || "",
+        background: savedTor.background || "",
+        objective: savedTor.objective || "",
+        scope: savedTor.scope || "",
+        warranty: savedTor.warranty || "",
+        acceptanceCriteria: savedTor.acceptanceCriteria || "",
+        duration: savedTor.duration,
+        durationUnit: savedTor.durationUnit || "days",
+        technicalSpec: savedTor.technicalSpec || "",
+        generalProvisions: savedTor.generalProvisions || "",
+        deliveryPoint: savedTor.deliveryPoint || "",
+        deliveryMechanism: savedTor.deliveryMechanism || "",
+        budgetItems: savedTor.budgetItems || [],
+      });
       
       setLastSaved(new Date());
 
@@ -154,7 +228,18 @@ export default function TorFormLayout({
     } finally {
       if (!isAutoSave) setIsSaving(false);
     }
-  };
+  }, [torId, formData, router, activeTab, setTabEditingState]);
+
+  // Auto-save every 30 seconds
+  useEffect(() => {
+    if (!torId) return; // Only auto-save for existing ToR
+
+    const interval = setInterval(() => {
+      handleSave(true);
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [torId, handleSave]);
 
   const handleSubmit = async () => {
     // Validate required fields
@@ -216,18 +301,34 @@ export default function TorFormLayout({
     return new Date(date).toLocaleDateString("id-ID");
   };
 
+  // ✅ FIXED: Export function without auto-save
   const handleExport = async () => {
     if (!torId) return;
     
-    // Auto-save before export to ensure latest data
-    await handleSave(true);
+    // ✅ Optional: Warn if there are unsaved changes in current tab
+    if (tabEditingState[activeTab]) {
+      const confirmExport = confirm(
+        'You have unsaved changes in the current tab. The export will use the last saved version.\n\n' +
+        'Do you want to continue with export?'
+      );
+      if (!confirmExport) return;
+    }
     
     try {
+      console.log('📥 Starting export...');
+      
+      // ✅ FIX: Don't auto-save before export
+      // Export should use data from database, not current state
+      // This prevents accidental data loss from corrupted state
+      
       const response = await fetch(`/api/tor/${torId}/export`);
+      
       if (!response.ok) {
         throw new Error('Failed to export ToR');
       }
+      
       const blob = await response.blob();
+      
       // Determine filename from Content-Disposition header if present
       let filename = `TOR-${formData.number || "draft"}.docx`;
       const disposition = response.headers.get('Content-Disposition');
@@ -237,9 +338,17 @@ export default function TorFormLayout({
           filename = match[1];
         }
       }
+      
+      console.log('✅ Export successful!');
       saveAs(blob, filename);
+      
+      // ✅ FIX: Reload data from database after export
+      // This ensures the UI displays the current database state
+      // including the cover image that was used in the export
+      console.log('🔄 Reloading data after export...');
+      await reloadData();
     } catch (error) {
-      console.error('Export error:', error);
+      console.error('❌ Export error:', error);
       alert('Failed to export ToR');
     }
   };
@@ -324,23 +433,31 @@ export default function TorFormLayout({
           {activeTab !== "informasi-umum" && (
             <div className="flex justify-end p-4 pb-0">
               <button
-                onClick={() => {
+                onClick={async () => {
                   const isCurrentlyEditing = tabEditingState[activeTab];
                   if (isCurrentlyEditing) {
                     if (confirm("Batalkan perubahan? Data yang belum disimpan akan hilang.")) {
+                      // ✅ FIX: Reload data from database before switching to view mode
+                      await reloadData();
                       setTabEditingState(prev => ({ ...prev, [activeTab]: false }));
                     }
                   } else {
                     setTabEditingState(prev => ({ ...prev, [activeTab]: true }));
                   }
                 }}
-                className={`px-4 py-2 rounded-lg flex items-center gap-2 transition text-sm ${
+                disabled={isReloading}
+                className={`px-4 py-2 rounded-lg flex items-center gap-2 transition text-sm disabled:opacity-50 disabled:cursor-not-allowed ${
                   tabEditingState[activeTab]
                     ? "bg-red-100 text-red-700 hover:bg-red-200 border border-red-300"
                     : "bg-blue-600 text-white hover:bg-blue-700"
                 }`}
               >
-                {tabEditingState[activeTab] ? (
+                {isReloading ? (
+                  <>
+                    <span className="animate-spin">⟳</span>
+                    Loading...
+                  </>
+                ) : tabEditingState[activeTab] ? (
                   <>
                     <X size={16} />
                     Cancel Edit

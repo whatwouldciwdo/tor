@@ -20,44 +20,65 @@ import {
 import fs from "fs";
 import path from "path";
 
-// Enhanced HTML to Paragraphs parser
-function parseHtmlToParagraphs(html: string | null): Paragraph[] {
+// Enhanced HTML to Paragraphs parser - WITH TABLE SUPPORT
+function parseHtmlToParagraphs(html: string | null): Array<Paragraph | Table> {
   if (!html) return [new Paragraph({})];
 
-  const paragraphs: Paragraph[] = [];
+  const paragraphs: Array<Paragraph | Table> = [];
   
-  // Split by paragraphs and list items, keeping the tags for context
-  // We use a simpler split first
-  const blocks = html.split(/<\/p>|<\/li>|<br\s*\/?>/i);
+  // Helper: Convert number to Roman numerals
+  function toRoman(num: number): string {
+    const map: [number, string][] = [
+      [1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'],
+      [100, 'C'], [90, 'XC'], [50, 'L'], [40, 'XL'],
+      [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I']
+    ];
+    let result = '';
+    for (const [value, numeral] of map) {
+      while (num >= value) {
+        result += numeral;
+        num -= value;
+      }
+    }
+    return result;
+  }
   
-  for (const block of blocks) {
-    if (!block.trim()) continue;
-    
+  // Helper: Generate list marker based on type
+  function getListMarker(type: string, index: number): string {
+    switch (type) {
+      case 'lower-alpha': return `${String.fromCharCode(96 + index)}. `;
+      case 'upper-alpha': return `${String.fromCharCode(64 + index)}. `;
+      case 'lower-roman': return `${toRoman(index).toLowerCase()}. `;
+      case 'upper-roman': return `${toRoman(index)}. `;
+      case 'decimal': return `${index}. `;
+      default: return `${index}. `;
+    }
+  }
+  
+  // Helper: Clean text from HTML tags
+  function cleanHtml(text: string): string {
+    return text
+      .replace(/<[^>]+>/g, '')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .trim();
+  }
+  
+  // Helper: Parse inline formatting (bold, italic, underline)
+  function parseInlineText(text: string): TextRun[] {
     const runs: TextRun[] = [];
-    let currentText = block;
+    let cleanedText = text.replace(/^<p[^>]*>|<\/p>$/gi, '').trim();
+    const parts = cleanedText.split(/(<\/?(?:strong|b|em|i|u|p)[^>]*>)/gi);
     
-    // Check if it's a list item
-    const isListItem = /<li[^>]*>/i.test(currentText);
-    
-    // Remove opening tags
-    currentText = currentText.replace(/<p[^>]*>|<li[^>]*>|<ol[^>]*>|<ul[^>]*>/gi, '');
-    
-    // Parse formatting
-    const parts = currentText.split(/(<\/?(strong|b|em|i)[^>]*>)/gi);
     let isBold = false;
     let isItalic = false;
+    let isUnderline = false;
     
-    // Add bullet/number for list items (simplified)
-    if (isListItem) {
-      runs.push(new TextRun({
-        text: "• ", // Generic bullet for now, hard to track numbers without full parser
-        font: "Arial",
-        size: 20,
-      }));
-    }
-    
-    for (let i = 0; i < parts.length; i++) {
-      const part = parts[i];
+    for (const part of parts) {
+      if (!part) continue;
       
       if (/<(strong|b)[^>]*>/i.test(part)) {
         isBold = true;
@@ -67,33 +88,472 @@ function parseHtmlToParagraphs(html: string | null): Paragraph[] {
         isItalic = true;
       } else if (/<\/(em|i)>/i.test(part)) {
         isItalic = false;
-      } else if (part && !/^</.test(part)) {
-        // Remove any remaining HTML tags
-        const cleanText = part.replace(/<[^>]+>/g, '').trim();
+      } else if (/<u[^>]*>/i.test(part)) {
+        isUnderline = true;
+      } else if (/<\/u>/i.test(part)) {
+        isUnderline = false;
+      } else if (/<\/?p[^>]*>/i.test(part)) {
+        continue;
+      } else if (!/^</.test(part)) {
+        const cleanText = cleanHtml(part);
+        
         if (cleanText) {
           runs.push(new TextRun({
             text: cleanText,
             font: "Arial",
-            size: 20, // 10pt
+            size: 20,
             bold: isBold,
             italics: isItalic,
+            underline: isUnderline ? {} : undefined,
           }));
         }
       }
     }
     
-    if (runs.length > 0) {
-      paragraphs.push(new Paragraph({
-        children: runs,
-        alignment: AlignmentType.JUSTIFIED,
-        spacing: {
-          line: 360, // 1.5 spacing
-          after: isListItem ? 0 : 200, // No space after list items for compact look
-        },
-        indent: isListItem ? { left: 720, hanging: 360 } : undefined, // Indent for list items
-      }));
-    }
+    return runs;
   }
+  
+  // Helper: Extract list style type from ol tag
+  function extractListStyleType(olTag: string): string {
+    const dataStyleMatch = olTag.match(/data-list-style=["']([^"']+)["']/i);
+    if (dataStyleMatch) {
+      return dataStyleMatch[1];
+    }
+    
+    const styleMatch = olTag.match(/style=["'][^"']*list-style-type:\s*([^;"']+)[^"']*["']/i);
+    if (styleMatch) {
+      return styleMatch[1].trim();
+    }
+    
+    const classMatch = olTag.match(/class=["'][^"']*list-style-([^"'\s]+)[^"']*["']/i);
+    if (classMatch) {
+      return classMatch[1];
+    }
+    
+    return 'decimal';
+  }
+  
+  // ✅ NEW: Process table element with gray header background
+  function processTable(tableHtml: string): Table {
+    console.log('   📊 Processing table');
+    
+    const rows: TableRow[] = [];
+    
+    // Extract all <tr> elements
+    const trRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
+    let trMatch;
+    let rowIndex = 0;
+    
+    while ((trMatch = trRegex.exec(tableHtml)) !== null) {
+      const trContent = trMatch[1];
+      const cells: TableCell[] = [];
+      
+      // Check if this row contains <th> elements (header row)
+      const hasHeaders = /<th[^>]*>/i.test(trContent);
+      
+      // Extract all <td> and <th> elements
+      const cellRegex = /<(td|th)[^>]*>([\s\S]*?)<\/\1>/gi;
+      let cellMatch;
+      
+      while ((cellMatch = cellRegex.exec(trContent)) !== null) {
+        const isHeader = cellMatch[1].toLowerCase() === 'th';
+        const cellContent = cellMatch[2];
+        const cellText = cleanHtml(cellContent);
+        
+        cells.push(
+          new TableCell({
+            children: [
+              new Paragraph({
+                children: [
+                  new TextRun({
+                    text: cellText || '',
+                    font: "Arial",
+                    size: 20,
+                    bold: isHeader,
+                  }),
+                ],
+                alignment: isHeader ? AlignmentType.CENTER : AlignmentType.LEFT,
+              }),
+            ],
+            verticalAlign: VerticalAlign.CENTER,
+            margins: {
+              top: 100,
+              bottom: 100,
+              left: 100,
+              right: 100,
+            },
+            // ✅ Add gray background for header cells
+            shading: isHeader ? {
+              fill: "D3D3D3", // Light gray color (same as Tiptap)
+              val: "clear",
+              color: "auto",
+            } : undefined,
+          })
+        );
+      }
+      
+      if (cells.length > 0) {
+        rows.push(new TableRow({ children: cells }));
+      }
+      
+      rowIndex++;
+    }
+    
+    console.log(`   ✅ Table with ${rows.length} rows`);
+    
+    return new Table({
+      rows: rows,
+      width: {
+        size: 100,
+        type: WidthType.PERCENTAGE,
+      },
+      borders: {
+        top: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+        bottom: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+        left: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+        right: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+        insideHorizontal: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+        insideVertical: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+      },
+    });
+  }
+  
+  // ✅ NEW: Process image element with base64 support
+  function processImage(imgTag: string): Paragraph {
+    const srcMatch = imgTag.match(/src=["']([^"']+)["']/i);
+    const altMatch = imgTag.match(/alt=["']([^"']+)["']/i);
+    const widthMatch = imgTag.match(/width=["']?(\d+)["']?/i);
+    const heightMatch = imgTag.match(/height=["']?(\d+)["']?/i);
+    
+    const alt = altMatch ? altMatch[1] : 'Image';
+    const src = srcMatch ? srcMatch[1] : '';
+    
+    console.log(`   🖼️ Image found: ${alt}`);
+    console.log(`      Source type: ${src.startsWith('data:') ? 'base64 data URL' : 'external URL'}`);
+    
+    // Handle base64 data URLs (from Tiptap paste)
+    if (src.startsWith('data:image/')) {
+      try {
+        // Extract the base64 data
+        const base64Match = src.match(/^data:image\/([^;]+);base64,(.+)$/);
+        if (base64Match) {
+          const imageType = base64Match[1]; // png, jpeg, gif, etc.
+          const base64Data = base64Match[2];
+          
+          // Convert base64 to buffer
+          const imageBuffer = Buffer.from(base64Data, 'base64');
+          
+          // Calculate dimensions (max 600px width for document)
+          let width = widthMatch ? parseInt(widthMatch[1]) : 600;
+          let height = heightMatch ? parseInt(heightMatch[1]) : 400;
+          
+          // Scale down if too large
+          if (width > 600) {
+            const ratio = 600 / width;
+            width = 600;
+            height = Math.floor(height * ratio);
+          }
+          
+          console.log(`   ✅ Base64 image loaded: ${width}x${height}px, type: ${imageType}`);
+          
+          // Map image type for docx
+          let docxType: "jpg" | "png" | "gif" | "bmp" = "png";
+          if (imageType === "jpeg" || imageType === "jpg") docxType = "jpg";
+          else if (imageType === "png") docxType = "png";
+          else if (imageType === "gif") docxType = "gif";
+          else if (imageType === "bmp") docxType = "bmp";
+          
+          return new Paragraph({
+            children: [
+              new ImageRun({
+                data: imageBuffer,
+                transformation: {
+                  width: width,
+                  height: height,
+                },
+                type: docxType,
+              }),
+            ],
+            alignment: AlignmentType.CENTER,
+            spacing: { before: 200, after: 200 },
+          });
+        }
+      } catch (error) {
+        console.error(`   ❌ Error processing base64 image:`, error);
+      }
+    }
+    
+    // Fallback for non-base64 images or errors
+    console.log(`   ⚠️ Image cannot be embedded (only base64 data URLs are supported)`);
+    return new Paragraph({
+      children: [
+        new TextRun({ 
+          text: `[📷 Image: ${alt}]`,
+          italics: true,
+          color: "666666",
+          font: "Arial",
+          size: 20,
+        })
+      ],
+      alignment: AlignmentType.CENTER,
+      spacing: { before: 200, after: 200 },
+    });
+  }
+  
+  // Track processed ranges to avoid duplicates
+  const processedRanges: Array<{ start: number; end: number }> = [];
+  
+  function isOverlapping(start: number, end: number): boolean {
+    return processedRanges.some(range => 
+      (start >= range.start && start < range.end) || 
+      (end > range.start && end <= range.end) ||
+      (start <= range.start && end >= range.end)
+    );
+  }
+  
+  // ✅ Find all top-level elements and their positions
+  const elements: Array<{ 
+    type: string; 
+    index: number; 
+    length: number; 
+    match: RegExpExecArray | null; 
+    content?: string 
+  }> = [];
+  
+  // Find all <p> tags
+  const pRegex = /<p[^>]*>([\s\S]*?)<\/p>/gi;
+  let pMatch;
+  while ((pMatch = pRegex.exec(html)) !== null) {
+    elements.push({ 
+      type: 'p', 
+      index: pMatch.index, 
+      length: pMatch[0].length,
+      match: pMatch 
+    });
+  }
+  
+  // Find all <ol> tags
+  const olRegex = /<ol([^>]*)>([\s\S]*?)<\/ol>/gi;
+  let olMatch;
+  while ((olMatch = olRegex.exec(html)) !== null) {
+    elements.push({ 
+      type: 'ol', 
+      index: olMatch.index, 
+      length: olMatch[0].length,
+      match: olMatch 
+    });
+  }
+  
+  // Find all <ul> tags
+  const ulRegex = /<ul[^>]*>([\s\S]*?)<\/ul>/gi;
+  let ulMatch;
+  while ((ulMatch = ulRegex.exec(html)) !== null) {
+    elements.push({ 
+      type: 'ul', 
+      index: ulMatch.index, 
+      length: ulMatch[0].length,
+      match: ulMatch 
+    });
+  }
+  
+  // ✅ NEW: Find all <img> tags
+  const imgRegex = /<img[^>]*>/gi;
+  let imgMatch;
+  while ((imgMatch = imgRegex.exec(html)) !== null) {
+    elements.push({ 
+      type: 'img', 
+      index: imgMatch.index, 
+      length: imgMatch[0].length,
+      match: null,
+      content: imgMatch[0]
+    });
+  }
+  
+  // ✅ NEW: Find all <table> tags
+  const tableRegex = /<table[^>]*>([\s\S]*?)<\/table>/gi;
+  let tableMatch;
+  while ((tableMatch = tableRegex.exec(html)) !== null) {
+    elements.push({ 
+      type: 'table', 
+      index: tableMatch.index, 
+      length: tableMatch[0].length,
+      match: null,
+      content: tableMatch[0]
+    });
+  }
+  
+  // Sort by position in HTML
+  elements.sort((a, b) => a.index - b.index);
+  
+  console.log(`📋 Found ${elements.length} elements`);
+  
+  // ✅ Process each element in order
+  elements.forEach((element, idx) => {
+    
+    if (element.type === 'ol') {
+      // ✅ Skip if overlapping (for nested lists)
+      if (isOverlapping(element.index, element.index + element.length)) {
+        console.log(`   ⏭️ Skipping overlapping ${element.type} at position ${element.index}`);
+        return;
+      }
+      
+      const olTag = element.match![1] || '';
+      const olContent = element.match![2];
+      const listStyleType = extractListStyleType('<ol' + olTag + '>');
+      
+      console.log(`${idx + 1}. 🔢 Ordered list (${listStyleType})`);
+      
+      const liRegex = /<li[^>]*>([\s\S]*?)<\/li>/gi;
+      const items: string[] = [];
+      let liMatch;
+      
+      while ((liMatch = liRegex.exec(olContent)) !== null) {
+        items.push(liMatch[1]);
+      }
+      
+      items.forEach((liContent, itemIdx) => {
+        const index = itemIdx + 1;
+        const marker = getListMarker(listStyleType, index);
+        const runs = parseInlineText(liContent);
+        
+        if (runs.length > 0) {
+          runs.unshift(new TextRun({
+            text: marker,
+            font: "Arial",
+            size: 20,
+          }));
+          
+          paragraphs.push(new Paragraph({
+            children: runs,
+            alignment: AlignmentType.JUSTIFIED,
+            spacing: { line: 360, after: 100 },
+            indent: { left: 720, hanging: 360 },
+          }));
+          
+          const preview = cleanHtml(liContent).substring(0, 30);
+          console.log(`   ${marker}${preview}`);
+        }
+      });
+      
+      processedRanges.push({
+        start: element.index,
+        end: element.index + element.length
+      });
+      
+    } else if (element.type === 'ul') {
+      // ✅ Skip if overlapping (for nested lists)
+      if (isOverlapping(element.index, element.index + element.length)) {
+        console.log(`   ⏭️ Skipping overlapping ${element.type} at position ${element.index}`);
+        return;
+      }
+      
+      const ulContent = element.match![1];
+      
+      console.log(`${idx + 1}. 🔘 Unordered list`);
+      
+      const liRegex = /<li[^>]*>([\s\S]*?)<\/li>/gi;
+      const items: string[] = [];
+      let liMatch;
+      
+      while ((liMatch = liRegex.exec(ulContent)) !== null) {
+        items.push(liMatch[1]);
+      }
+      
+      items.forEach(liContent => {
+        const runs = parseInlineText(liContent);
+        
+        if (runs.length > 0) {
+          runs.unshift(new TextRun({
+            text: '• ',
+            font: "Arial",
+            size: 20,
+          }));
+          
+          paragraphs.push(new Paragraph({
+            children: runs,
+            alignment: AlignmentType.JUSTIFIED,
+            spacing: { line: 360, after: 100 },
+            indent: { left: 720, hanging: 360 },
+          }));
+          
+          const preview = cleanHtml(liContent).substring(0, 30);
+          console.log(`   • ${preview}`);
+        }
+      });
+      
+      processedRanges.push({
+        start: element.index,
+        end: element.index + element.length
+      });
+      
+    } else if (element.type === 'img') {
+      // ✅ Images should NEVER be skipped
+      console.log(`${idx + 1}. 🖼️ Image element`);
+      
+      const imageParagraph = processImage(element.content!);
+      paragraphs.push(imageParagraph);
+      
+      // Don't add to processedRanges - images are standalone
+      
+    } else if (element.type === 'table') {
+      // ✅ Tables should NEVER be skipped
+      console.log(`${idx + 1}. 📊 Table element`);
+      
+      const table = processTable(element.content!);
+      paragraphs.push(table);
+      
+      processedRanges.push({
+        start: element.index,
+        end: element.index + element.length
+      });
+      
+    } else if (element.type === 'p') {
+      // ✅ Skip if overlapping (for paragraphs inside lists)
+      if (isOverlapping(element.index, element.index + element.length)) {
+        console.log(`   ⏭️ Skipping overlapping ${element.type} at position ${element.index}`);
+        return;
+      }
+      
+      const pContent = element.match![1];
+      const cleaned = cleanHtml(pContent);
+      
+      // Handle empty paragraphs as line breaks
+      if (!cleaned || cleaned === '' || pContent.trim() === '<br>' || pContent.trim() === '<br/>') {
+        paragraphs.push(new Paragraph({
+          children: [new TextRun({ text: '', font: "Arial", size: 20 })],
+          spacing: { after: 200 },
+        }));
+        
+        console.log(`${idx + 1}. 📝 [empty line]`);
+        
+        processedRanges.push({
+          start: element.index,
+          end: element.index + element.length
+        });
+        return;
+      }
+      
+      const runs = parseInlineText(pContent);
+      
+      if (runs.length > 0) {
+        paragraphs.push(new Paragraph({
+          children: runs,
+          alignment: AlignmentType.JUSTIFIED,
+          spacing: { line: 360, after: 200 },
+        }));
+        
+        const preview = cleaned.substring(0, 30);
+        console.log(`${idx + 1}. 📝 ${preview}`);
+        
+        processedRanges.push({
+          start: element.index,
+          end: element.index + element.length
+        });
+      }
+    }
+  });
+  
+  console.log(`✅ Total exported: ${paragraphs.length} elements\n`);
   
   return paragraphs.length > 0 ? paragraphs : [new Paragraph({})];
 }
@@ -187,7 +647,10 @@ export async function GET(
 
     console.log("📄 Exporting TOR:", tor.title);
     console.log("   - ID:", tor.id);
-    console.log("   - Cover Image Path:", tor.coverImage || "(none)");
+    console.log("   - 🖼️  Cover Image Path:", tor.coverImage || "(none)");
+    console.log("   - Cover Image type:", typeof tor.coverImage);
+    console.log("   - Has coverImage:", !!tor.coverImage);
+    console.log("   - Cover Image length:", tor.coverImage?.length || 0);
 
     // Read Logo Images
     const plnLogoPath = path.join(process.cwd(), "public", "logo-pln-horizontal.jpg");
@@ -373,7 +836,7 @@ export async function GET(
               spacing: { after: 800 },
             }),
 
-            // Cover Image (Fixed!)
+            // Cover Image
             ...coverImageParagraphs,
 
             // Spacing

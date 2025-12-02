@@ -235,6 +235,24 @@ export default function Tab2Pendahuluan({ formData, onChange, isEditing = false 
   readOnly={!isEditing}
 />
 
+{/* Garansi */}
+<TiptapEditor
+  label="Garansi"
+  content={formData.warranty}
+  onChange={(html) => handleInputChange("warranty", html)}
+  placeholder="Jelaskan garansi yang diberikan untuk pekerjaan ini..."
+  readOnly={!isEditing}
+/>
+
+{/* Kriteria yang Diterima */}
+<TiptapEditor
+  label="Kriteria yang Diterima"
+  content={formData.acceptanceCriteria}
+  onChange={(html) => handleInputChange("acceptanceCriteria", html)}
+  placeholder="Jelaskan kriteria penerimaan hasil pekerjaan..."
+  readOnly={!isEditing}
+/>
+
       {/* Deskripsi Tambahan */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">

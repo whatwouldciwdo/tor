@@ -26,6 +26,8 @@ export interface TorFormData {
   background?: string;
   objective?: string;
   scope?: string;
+  warranty?: string; // Garansi
+  acceptanceCriteria?: string; // Kriteria yang diterima
   
   // Tab 3: Tahapan Pekerjaan
   duration?: number;
