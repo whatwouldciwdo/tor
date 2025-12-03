@@ -159,6 +159,8 @@ model Tor {
   isFinalApproved   Boolean          @default(false)
   isExported        Boolean          @default(false)
   exportedAt        DateTime?
+  directorProposals     Json?   // Array of {id, name}
+  fieldDirectorProposals Json?  // Array of {id, name}
 
   // === TAB 1: INFORMASI UMUM ===
   creationDate          DateTime?
@@ -199,9 +201,9 @@ model Tor {
 
   // === TAB 4: USULAN ===
   directorProposal      String?          @db.Text
-  fieldDirectorProposal String?          @db.Text
+  fieldDirectorProposal Json?            // Array of strings
   vendorRequirements    String?          @db.Text
-  procurementMethod     String?
+  procurementMethod     String?          @db.Text
   paymentTerms          String?          @db.Text
   penaltyRules          String?          @db.Text
   otherRequirements     String?          @db.Text

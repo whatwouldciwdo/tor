@@ -1,4 +1,16 @@
 // Types for ToR Form
+
+// NEW: Director Proposal types
+export interface DirectorProposal {
+  id: string;
+  name: string; // Nama jabatan Direksi Pekerjaan
+}
+
+export interface FieldDirectorProposal {
+  id: string;
+  name: string; // Nama jabatan Direksi Lapangan
+}
+
 export interface TorFormData {
   id?: number;
   number?: string;
@@ -33,27 +45,31 @@ export interface TorFormData {
   duration?: number;
   durationUnit?: string;
   technicalSpec?: string;
-  workStages?: WorkStagesTable; // NEW: Work stages Gantt table
-  workStagesExplanation?: string; // NEW: Table explanation
-  deliveryRequirements?: string; // NEW: Persyaratan Pengiriman
-  handoverPoint?: string; // RENAMED from deliveryPoint (Titik Serah Terima)
-  handoverMechanism?: string; // RENAMED from deliveryMechanism (Mekanisme Serah Terima)
+  workStages?: WorkStagesTable; // Work stages Gantt table
+  workStagesExplanation?: string; // Table explanation
+  deliveryRequirements?: string; // Persyaratan Pengiriman
+  handoverPoint?: string; // Titik Serah Terima
+  handoverMechanism?: string; // Mekanisme Serah Terima
   generalProvisions?: string;
   deliveryPoint?: string; // DEPRECATED: use handoverPoint
   deliveryMechanism?: string; // DEPRECATED: use handoverMechanism
   
   // Tab 4: Usulan
-  directorProposal?: string;
-  fieldDirectorProposal?: string;
-  vendorRequirements?: string;
-  procurementMethod?: string;
-  paymentTerms?: string;
-  penaltyRules?: string;
-  otherRequirements?: string;
+  directorProposals?: DirectorProposal[]; // Array of Direksi Pekerjaan
+  fieldDirectorProposals?: FieldDirectorProposal[]; // Array of Direksi Lapangan
+  vendorRequirements?: string; // TiptapEditor HTML
+  procurementMethod?: string; // TiptapEditor HTML
+  paymentTerms?: string; // TiptapEditor HTML
+  penaltyRules?: string; // TiptapEditor HTML
+  otherRequirements?: string; // TiptapEditor HTML
   subtotal?: number;
   ppn?: number;
   pph?: number;
   grandTotal?: number;
+  
+  // Legacy fields (deprecated - for backward compatibility)
+  directorProposal?: string;
+  fieldDirectorProposal?: string;
   
   // Tab 6: Lampiran
   tpgData?: any;
