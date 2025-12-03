@@ -79,6 +79,12 @@ export default async function CreateTorPage({ searchParams }: PageProps) {
       scope: tor.scope ?? undefined,
       warranty: (tor as any).warranty ?? undefined, // Cast to any to avoid stale type error
       acceptanceCriteria: (tor as any).acceptanceCriteria ?? undefined,
+      // Tab 3: Work stages
+      workStages: (tor as any).workStagesData ?? undefined,
+      workStagesExplanation: (tor as any).workStagesExplanation ?? undefined,
+      deliveryRequirements: (tor as any).deliveryRequirements ?? undefined,
+      handoverPoint: (tor as any).handoverPoint ?? undefined,
+      handoverMechanism: (tor as any).handoverMechanism ?? undefined,
       // Convert Decimal fields to numbers
       materialJasaValue: tor.materialJasaValue ? Number(tor.materialJasaValue) : undefined,
       budgetAmount: tor.budgetAmount ? Number(tor.budgetAmount) : null,

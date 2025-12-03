@@ -59,6 +59,12 @@ export default function TorFormLayout({
     generalProvisions: initialData?.generalProvisions || "",
     deliveryPoint: initialData?.deliveryPoint || "",
     deliveryMechanism: initialData?.deliveryMechanism || "",
+    // Tab 3: Work Stages
+    workStages: initialData?.workStages,
+    workStagesExplanation: initialData?.workStagesExplanation || "",
+    deliveryRequirements: initialData?.deliveryRequirements || "",
+    handoverPoint: initialData?.handoverPoint || "",
+    handoverMechanism: initialData?.handoverMechanism || "",
     budgetItems: initialData?.budgetItems || [],
   });
   const [isSaving, setIsSaving] = useState(false);
@@ -142,6 +148,12 @@ export default function TorFormLayout({
         generalProvisions: freshData.generalProvisions || "",
         deliveryPoint: freshData.deliveryPoint || "",
         deliveryMechanism: freshData.deliveryMechanism || "",
+        // Tab 3: Work Stages
+        workStages: freshData.workStagesData, // Note: API returns workStagesData
+        workStagesExplanation: freshData.workStagesExplanation || "",
+        deliveryRequirements: freshData.deliveryRequirements || "",
+        handoverPoint: freshData.handoverPoint || "",
+        handoverMechanism: freshData.handoverMechanism || "",
         budgetItems: freshData.budgetItems || [],
       });
     } catch (error: any) {
@@ -203,6 +215,12 @@ export default function TorFormLayout({
         generalProvisions: savedTor.generalProvisions || "",
         deliveryPoint: savedTor.deliveryPoint || "",
         deliveryMechanism: savedTor.deliveryMechanism || "",
+        // Tab 3: Work Stages
+        workStages: savedTor.workStagesData, // Note: API returns workStagesData
+        workStagesExplanation: savedTor.workStagesExplanation || "",
+        deliveryRequirements: savedTor.deliveryRequirements || "",
+        handoverPoint: savedTor.handoverPoint || "",
+        handoverMechanism: savedTor.handoverMechanism || "",
         budgetItems: savedTor.budgetItems || [],
       });
       

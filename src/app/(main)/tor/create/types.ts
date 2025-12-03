@@ -33,9 +33,14 @@ export interface TorFormData {
   duration?: number;
   durationUnit?: string;
   technicalSpec?: string;
+  workStages?: WorkStagesTable; // NEW: Work stages Gantt table
+  workStagesExplanation?: string; // NEW: Table explanation
+  deliveryRequirements?: string; // NEW: Persyaratan Pengiriman
+  handoverPoint?: string; // RENAMED from deliveryPoint (Titik Serah Terima)
+  handoverMechanism?: string; // RENAMED from deliveryMechanism (Mekanisme Serah Terima)
   generalProvisions?: string;
-  deliveryPoint?: string;
-  deliveryMechanism?: string;
+  deliveryPoint?: string; // DEPRECATED: use handoverPoint
+  deliveryMechanism?: string; // DEPRECATED: use handoverMechanism
   
   // Tab 4: Usulan
   directorProposal?: string;
@@ -74,6 +79,25 @@ export interface BudgetItem {
   unitPrice: number;
   totalPrice: number;
   orderIndex?: number;
+}
+
+// Work Stages Gantt Table Types
+export interface WorkStagesTable {
+  years: WorkStageYear[];
+  rows: WorkStageRow[];
+}
+
+export interface WorkStageYear {
+  id: string;
+  label: string; // e.g., "2025", "2026"
+  months: string[]; // 12 month labels
+}
+
+export interface WorkStageRow {
+  id: string;
+  no: number;
+  description: string;
+  schedule: Record<string, Record<number, boolean>>; // yearId -> monthIndex (0-11) -> isActive
 }
 
 export interface Tor extends TorFormData {

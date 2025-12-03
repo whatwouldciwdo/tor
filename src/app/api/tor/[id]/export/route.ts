@@ -67,34 +67,40 @@ function parseHtmlToParagraphs(html: string | null): Array<Paragraph | Table> {
       .trim();
   }
   
-  // Helper: Parse inline formatting (bold, italic, underline)
+  // Helper: Parse inline formatting (bold, italic, underline, strikethrough)
   function parseInlineText(text: string): TextRun[] {
     const runs: TextRun[] = [];
-    let cleanedText = text.replace(/^<p[^>]*>|<\/p>$/gi, '').trim();
-    const parts = cleanedText.split(/(<\/?(?:strong|b|em|i|u|p)[^>]*>)/gi);
+    let cleanedText = text.replace(/^\u003cp[^\u003e]*\u003e|\u003c\/p\u003e$/gi, '').trim();
+    // Split by formatting tags including strikethrough
+    const parts = cleanedText.split(/(\u003c\/?(?:strong|b|em|i|u|s|strike|del|p)[^\u003e]*\u003e)/gi);
     
     let isBold = false;
     let isItalic = false;
     let isUnderline = false;
+    let isStrikethrough = false;
     
     for (const part of parts) {
       if (!part) continue;
       
-      if (/<(strong|b)[^>]*>/i.test(part)) {
+      if (/\u003c(strong|b)[^\u003e]*\u003e/i.test(part)) {
         isBold = true;
-      } else if (/<\/(strong|b)>/i.test(part)) {
+      } else if (/\u003c\/(strong|b)\u003e/i.test(part)) {
         isBold = false;
-      } else if (/<(em|i)[^>]*>/i.test(part)) {
+      } else if (/\u003c(em|i)[^\u003e]*\u003e/i.test(part)) {
         isItalic = true;
-      } else if (/<\/(em|i)>/i.test(part)) {
+      } else if (/\u003c\/(em|i)\u003e/i.test(part)) {
         isItalic = false;
-      } else if (/<u[^>]*>/i.test(part)) {
+      } else if (/\u003cu[^\u003e]*\u003e/i.test(part)) {
         isUnderline = true;
-      } else if (/<\/u>/i.test(part)) {
+      } else if (/\u003c\/u\u003e/i.test(part)) {
         isUnderline = false;
-      } else if (/<\/?p[^>]*>/i.test(part)) {
+      } else if (/\u003c(s|strike|del)[^\u003e]*\u003e/i.test(part)) {
+        isStrikethrough = true;
+      } else if (/\u003c\/(s|strike|del)\u003e/i.test(part)) {
+        isStrikethrough = false;
+      } else if (/\u003c\/?p[^\u003e]*\u003e/i.test(part)) {
         continue;
-      } else if (!/^</.test(part)) {
+      } else if (!/^\u003c/.test(part)) {
         const cleanText = cleanHtml(part);
         
         if (cleanText) {
@@ -105,6 +111,7 @@ function parseHtmlToParagraphs(html: string | null): Array<Paragraph | Table> {
             bold: isBold,
             italics: isItalic,
             underline: isUnderline ? {} : undefined,
+            strike: isStrikethrough,
           }));
         }
       }
@@ -185,7 +192,6 @@ function parseHtmlToParagraphs(html: string | null): Array<Paragraph | Table> {
             // ✅ Add gray background for header cells
             shading: isHeader ? {
               fill: "D3D3D3", // Light gray color (same as Tiptap)
-              val: "clear",
               color: "auto",
             } : undefined,
           })
@@ -616,6 +622,118 @@ function loadCoverImage(coverImagePath: string | null): {
   }
 }
 
+// ✅ NEW: Generate Work Stages Gantt Table
+function generateWorkStagesTable(workStagesData: any): Table {
+  if (!workStagesData || !workStagesData.years || !workStagesData.rows) {
+    return new Table({
+      rows: [
+        new TableRow({
+          children: [
+            new TableCell({
+              children: [new Paragraph("No data available")],
+            }),
+          ],
+        }),
+      ],
+    });
+  }
+
+  const years = workStagesData.years;
+  const rows = workStagesData.rows;
+
+  // 1. Header Row 1: No, Deskripsi, Years
+  const headerRow1Cells = [
+    new TableCell({
+      children: [new Paragraph({ children: [new TextRun({ text: "No", bold: true, font: "Arial", size: 16, color: "000000" })], alignment: AlignmentType.CENTER })],
+      rowSpan: 2,
+      verticalAlign: VerticalAlign.CENTER,
+      width: { size: 4, type: WidthType.PERCENTAGE }, // Reduced to 4%
+      shading: { fill: "22D3EE", color: "auto" }, // Cyan-400
+    }),
+    new TableCell({
+      children: [new Paragraph({ children: [new TextRun({ text: "Deskripsi", bold: true, font: "Arial", size: 16, color: "000000" })], alignment: AlignmentType.CENTER })],
+      rowSpan: 2,
+      verticalAlign: VerticalAlign.CENTER,
+      width: { size: 20, type: WidthType.PERCENTAGE }, // Reduced to 20%
+      shading: { fill: "22D3EE", color: "auto" }, // Cyan-400
+    }),
+  ];
+
+  // Calculate total months to distribute remaining width
+  const totalMonths = years.reduce((acc: number, year: any) => acc + year.months.length, 0);
+  const remainingWidth = 76; // 100 - 4 - 20
+  const monthWidth = totalMonths > 0 ? remainingWidth / totalMonths : 0;
+
+  // Add Year headers
+  years.forEach((year: any) => {
+    headerRow1Cells.push(
+      new TableCell({
+        children: [new Paragraph({ children: [new TextRun({ text: year.label, bold: true, font: "Arial", size: 16, color: "000000" })], alignment: AlignmentType.CENTER })],
+        columnSpan: year.months.length, // Span actual number of months
+        shading: { fill: "22D3EE", color: "auto" }, // Cyan-400
+      })
+    );
+  });
+
+  // 2. Header Row 2: Months
+  const headerRow2Cells: TableCell[] = [];
+  years.forEach((year: any) => {
+    year.months.forEach((month: string) => {
+      headerRow2Cells.push(
+        new TableCell({
+          children: [new Paragraph({ children: [new TextRun({ text: month, size: 12, font: "Arial", color: "000000" })], alignment: AlignmentType.CENTER })],
+          width: { size: monthWidth, type: WidthType.PERCENTAGE },
+          shading: { fill: "22D3EE", color: "auto" }, // Cyan-400
+        })
+      );
+    });
+  });
+
+  // 3. Data Rows
+  const dataRows = rows.map((row: any) => {
+    const cells = [
+      new TableCell({
+        children: [new Paragraph({ children: [new TextRun({ text: row.no.toString(), size: 16, font: "Arial", color: "000000" })], alignment: AlignmentType.CENTER })],
+      }),
+      new TableCell({
+        children: [new Paragraph({ children: [new TextRun({ text: row.description, size: 16, font: "Arial", color: "000000" })] })],
+      }),
+    ];
+
+    // Add schedule cells
+    years.forEach((year: any) => {
+      year.months.forEach((_: any, monthIdx: number) => {
+        const isActive = row.schedule[year.id]?.[monthIdx];
+        cells.push(
+          new TableCell({
+            children: [new Paragraph("")],
+            shading: isActive ? { fill: "00FF00", color: "auto" } : undefined, // Green if active
+          })
+        );
+      });
+    });
+
+    return new TableRow({ children: cells });
+  });
+
+  return new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    rows: [
+      new TableRow({ children: headerRow1Cells }),
+      new TableRow({ children: headerRow2Cells }),
+      ...dataRows,
+    ],
+    borders: {
+      top: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+      bottom: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+      left: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+      right: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+      insideHorizontal: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+      insideVertical: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+    },
+  });
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -1033,11 +1151,11 @@ export async function GET(
             }),
             ...parseHtmlToParagraphs(tor.scope),
 
-            // 5. Jangka Waktu
+            // 5. Garansi
             new Paragraph({
               children: [
                 new TextRun({
-                  text: "5. JANGKA WAKTU PELAKSANAAN",
+                  text: "5. GARANSI",
                   font: "Arial",
                   size: 20,
                   bold: true,
@@ -1045,25 +1163,85 @@ export async function GET(
               ],
               spacing: { before: 200, after: 100 },
             }),
+            ...parseHtmlToParagraphs(tor.warranty),
+
+            // 6. Kriteria yang Diterima
             new Paragraph({
               children: [
                 new TextRun({
-                  text: tor.duration 
-                    ? `${tor.duration} ${tor.durationUnit === 'days' ? 'Hari Kalender' : tor.durationUnit === 'weeks' ? 'Minggu' : 'Bulan'}`
-                    : '-',
+                  text: "6. KRITERIA YANG DITERIMA",
                   font: "Arial",
                   size: 20,
+                  bold: true,
                 }),
               ],
-              alignment: AlignmentType.JUSTIFIED,
-              spacing: { line: 360 },
+              spacing: { before: 200, after: 100 },
             }),
+            ...parseHtmlToParagraphs(tor.acceptanceCriteria),
 
-            // 6. Spesifikasi Teknis
+            // 7. TAHAPAN PEKERJAAN & Project Time Schedule
             new Paragraph({
               children: [
                 new TextRun({
-                  text: "6. SPESIFIKASI TEKNIS",
+                  text: "7. TAHAPAN PEKERJAAN & Project Time Schedule",
+                  font: "Arial",
+                  size: 20,
+                  bold: true,
+                }),
+              ],
+              spacing: { before: 200, after: 100 },
+            }),
+            generateWorkStagesTable(tor.workStagesData),
+            new Paragraph({ children: [], spacing: { after: 200 } }), // Spacing after table
+            ...parseHtmlToParagraphs(tor.workStagesExplanation),
+
+            // 8. PERSYARATAN PENGIRIMAN
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: "8. PERSYARATAN PENGIRIMAN",
+                  font: "Arial",
+                  size: 20,
+                  bold: true,
+                }),
+              ],
+              spacing: { before: 200, after: 100 },
+            }),
+            ...parseHtmlToParagraphs(tor.deliveryRequirements),
+
+            // 9. TITIK SERAH TERIMA
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: "9. TITIK SERAH TERIMA",
+                  font: "Arial",
+                  size: 20,
+                  bold: true,
+                }),
+              ],
+              spacing: { before: 200, after: 100 },
+            }),
+            ...parseHtmlToParagraphs(tor.handoverPoint),
+
+            // 10. MEKANISME SERAH TERIMA
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: "10. MEKANISME SERAH TERIMA",
+                  font: "Arial",
+                  size: 20,
+                  bold: true,
+                }),
+              ],
+              spacing: { before: 200, after: 100 },
+            }),
+            ...parseHtmlToParagraphs(tor.handoverMechanism),
+
+            // 11. SPESIFIKASI TEKNIS
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: "11. SPESIFIKASI TEKNIS",
                   font: "Arial",
                   size: 20,
                   bold: true,
@@ -1073,11 +1251,11 @@ export async function GET(
             }),
             ...parseHtmlToParagraphs(tor.technicalSpec),
 
-            // 7. RAB Table
+            // 12. RENCANA ANGGARAN BIAYA (RAB)
             new Paragraph({
               children: [
                 new TextRun({
-                  text: "7. RENCANA ANGGARAN BIAYA (RAB)",
+                  text: "12. RENCANA ANGGARAN BIAYA (RAB)",
                   font: "Arial",
                   size: 20,
                   bold: true,

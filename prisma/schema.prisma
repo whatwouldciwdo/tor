@@ -188,9 +188,14 @@ model Tor {
   duration              Int?
   durationUnit          String?          // "days", "weeks", "months"
   technicalSpec         String?          @db.Text
+  workStagesData        Json?            // Work stages Gantt table (WorkStagesTable)
+  workStagesExplanation String?          @db.Text // Table explanation
+  deliveryRequirements  String?          @db.Text // Persyaratan Pengiriman
+  handoverPoint         String?          @db.Text // Titik Serah Terima (renamed from deliveryPoint)
+  handoverMechanism     String?          @db.Text // Mekanisme Serah Terima (renamed from deliveryMechanism)
   generalProvisions     String?          @db.Text
-  deliveryPoint         String?          @db.Text
-  deliveryMechanism     String?          @db.Text
+  deliveryPoint         String?          @db.Text // DEPRECATED: use handoverPoint
+  deliveryMechanism     String?          @db.Text // DEPRECATED: use handoverMechanism
 
   // === TAB 4: USULAN ===
   directorProposal      String?          @db.Text

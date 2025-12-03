@@ -1,10 +1,12 @@
 "use client";
 
 import { TabProps } from "./types";
-import RichTextEditor from "./components/RichTextEditor";
+import TiptapEditor from "./components/TiptapEditor";
+import GanttTableEditor from "./components/GanttTableEditor";
 
-export default function Tab3TahapanPekerjaan({ formData, onChange }: TabProps) {
+export default function Tab3TahapanPekerjaan({ formData, onChange, isEditing = false }: TabProps) {
   const handleInputChange = (field: string, value: any) => {
+    if (!isEditing) return; // Prevent changes when not editing
     onChange({ [field]: value });
   };
 
@@ -14,69 +16,53 @@ export default function Tab3TahapanPekerjaan({ formData, onChange }: TabProps) {
         Tahapan Pekerjaan
       </h2>
 
-      {/* Jangka Waktu Pelaksanaan */}
+      {/* Work Stages Gantt Table */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Jangka Waktu Pelaksanaan
+          Jadwal Tahapan Pekerjaan <span className="text-red-500">*</span>
         </label>
-        <div className="grid grid-cols-2 gap-4">
-          <input
-            type="number"
-            value={formData.duration || ""}
-            onChange={(e) => handleInputChange("duration", parseInt(e.target.value))}
-            placeholder="Jumlah"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-          <select
-            value={formData.durationUnit || "days"}
-            onChange={(e) => handleInputChange("durationUnit", e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="days">Hari Kalender</option>
-            <option value="weeks">Minggu</option>
-            <option value="months">Bulan</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Spesifikasi Teknis */}
-      <RichTextEditor
-        label="Spesifikasi Teknis"
-        content={formData.technicalSpec}
-        onChange={(html) => handleInputChange("technicalSpec", html)}
-        placeholder="Detail spesifikasi teknis pekerjaan..."
-      />
-
-      {/* Ketentuan Umum */}
-      <RichTextEditor
-        label="Ketentuan Umum"
-        content={formData.generalProvisions}
-        onChange={(html) => handleInputChange("generalProvisions", html)}
-        placeholder="Ketentuan umum pelaksanaan pekerjaan..."
-      />
-
-      {/* Titik Serah Terima */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Titik Serah Terima
-        </label>
-        <textarea
-          value={formData.deliveryPoint || ""}
-          onChange={(e) => handleInputChange("deliveryPoint", e.target.value)}
-          placeholder="Lokasi serah terima pekerjaan..."
-          rows={3}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        <GanttTableEditor
+          data={formData.workStages}
+          onChange={(data) => handleInputChange("workStages", data)}
+          isEditing={isEditing}
         />
       </div>
 
+      {/* Table Explanation */}
+      <TiptapEditor
+        label="Penjelasan Tabel (Opsional)"
+        content={formData.workStagesExplanation}
+        onChange={(html) => handleInputChange("workStagesExplanation", html)}
+        placeholder="Tambahkan penjelasan mengenai tahapan pekerjaan jika diperlukan..."
+        readOnly={!isEditing}
+      />
+
+      {/* Persyaratan Pengiriman */}
+      <TiptapEditor
+        label="Persyaratan Pengiriman"
+        content={formData.deliveryRequirements}
+        onChange={(html) => handleInputChange("deliveryRequirements", html)}
+        placeholder="Jelaskan persyaratan pengiriman hasil pekerjaan..."
+        readOnly={!isEditing}
+      />
+
+      {/* Titik Serah Terima */}
+      <TiptapEditor
+        label="Titik Serah Terima"
+        content={formData.handoverPoint}
+        onChange={(html) => handleInputChange("handoverPoint", html)}
+        placeholder="Jelaskan titik/lokasi serah terima hasil pekerjaan..."
+        readOnly={!isEditing}
+      />
+
       {/* Mekanisme Serah Terima */}
-      <RichTextEditor
+      <TiptapEditor
         label="Mekanisme Serah Terima"
-        content={formData.deliveryMechanism}
-        onChange={(html) => handleInputChange("deliveryMechanism", html)}
-        placeholder="Prosedur dan persyaratan serah terima..."
+        content={formData.handoverMechanism}
+        onChange={(html) => handleInputChange("handoverMechanism", html)}
+        placeholder="Jelaskan prosedur dan mekanisme serah terima hasil pekerjaan..."
+        readOnly={!isEditing}
       />
     </div>
   );
 }
-
