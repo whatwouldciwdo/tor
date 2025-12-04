@@ -36,7 +36,7 @@ export default async function CreateTorPage({ searchParams }: PageProps) {
     );
   }
 
-  const bidangId = dbUser.position.bidangId;
+  const bidangId = dbUser.position.bidangId ?? undefined;
   const bidangName = dbUser.position.bidang?.name || "Unknown";
   const creatorName = dbUser.name;
 
@@ -111,7 +111,8 @@ export default async function CreateTorPage({ searchParams }: PageProps) {
         initialData={initialData}
         bidangId={bidangId}
         bidangName={bidangName}
-        creatorName={creatorName}
+        creatorName={tor.creator?.name || creatorName}
+        creatorPosition={tor.creator?.position?.name || dbUser.position.name}
       />
     );
   }
@@ -122,6 +123,7 @@ export default async function CreateTorPage({ searchParams }: PageProps) {
       bidangId={bidangId}
       bidangName={bidangName}
       creatorName={creatorName}
+      creatorPosition={dbUser.position.name}
     />
   );
 }

@@ -1,7 +1,7 @@
-// src/app/(main)/tor/page.tsx
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
+import TorListItem from "./TorListItem";
 
 type PageProps = {
   searchParams?: Promise<{
@@ -132,36 +132,12 @@ export default async function TorListPage({ searchParams }: PageProps) {
         {/* List TOR */}
         <div className="space-y-3">
           {torList.map((tor) => (
-            <Link
-              key={tor.id}
-              href={`/tor/${tor.id}`}
-              className="block p-4 bg-[#333] rounded-lg hover:bg-[#3a3a3a]"
-            >
-              <div className="text-lg font-medium">
-                {tor.title || "Tanpa Judul"}
-              </div>
-
-              {/* Info utama */}
-              {view === "mine" ? (
-                <div className="text-sm text-gray-300">
-                  {tor.bidang?.name ?? "-"} — {tor.statusStage}
-                </div>
-              ) : (
-                <div className="text-sm text-gray-300 space-y-0.5">
-                  <div>
-                    Bidang: {tor.bidang?.name ?? "-"} — Status: {tor.statusStage}
-                  </div>
-                  <div>
-                    Step: {tor.currentStepNumber} | Pengusul:{" "}
-                    {tor.creator?.name ?? "-"}
-                  </div>
-                </div>
-              )}
-
-              <div className="text-xs text-gray-400">
-                {new Date(tor.createdAt).toLocaleString("id-ID")}
-              </div>
-            </Link>
+            <TorListItem 
+              key={tor.id} 
+              tor={tor} 
+              isCreator={tor.creatorUserId === sessionUser.id}
+              view={view as "mine" | "approve"}
+            />
           ))}
 
           {torList.length === 0 && (

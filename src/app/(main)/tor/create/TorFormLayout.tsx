@@ -10,7 +10,7 @@ import Tab3TahapanPekerjaan from "./Tab3TahapanPekerjaan";
 import Tab4Usulan from "./Tab4Usulan";
 import Tab5LembarPengesahan from "./Tab5LembarPengesahan";
 import Tab6Lampiran from "./Tab6Lampiran";
-import { Edit, X } from "lucide-react";
+import { Edit, X, Home } from "lucide-react";
 
 interface TorFormLayoutProps {
   torId?: number;
@@ -18,6 +18,7 @@ interface TorFormLayoutProps {
   bidangId?: number;
   bidangName?: string;
   creatorName?: string;
+  creatorPosition?: string;
 }
 
 export default function TorFormLayout({
@@ -26,6 +27,7 @@ export default function TorFormLayout({
   bidangId,
   bidangName,
   creatorName,
+  creatorPosition,
 }: TorFormLayoutProps) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabId>("informasi-umum");
@@ -94,7 +96,7 @@ export default function TorFormLayout({
   });
 
   // ✅ FIX: Debounced auto-save
-  const saveTimeoutRef = useRef<NodeJS.Timeout>();
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastSaveDataRef = useRef<string>('');
   const hasInitializedDates = useRef(false);
 
@@ -416,8 +418,17 @@ export default function TorFormLayout({
   return (
     <div className="min-h-screen bg-gray-50 px-6 py-10">
       <div className="max-w-7xl mx-auto space-y-6">
+
+
         {/* Header */}
-        <div>
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => router.push("/tor")}
+            className="p-2 rounded-lg bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 transition-colors"
+            title="Kembali ke Dashboard"
+          >
+            <Home size={20} />
+          </button>
           <h1 className="text-3xl font-semibold text-gray-900">
             {torId ? "Edit TOR" : "Create New TOR"}
           </h1>
@@ -539,8 +550,8 @@ export default function TorFormLayout({
                 isEditing={tabEditingState[activeTab]}
                 torId={torId}
                 bidangId={formData.bidangId}
-                creatorName={initialData?.creator?.name}
-                creatorPosition={initialData?.creator?.position?.name}
+                creatorName={creatorName}
+                creatorPosition={creatorPosition}
               />
             )}
           </div>

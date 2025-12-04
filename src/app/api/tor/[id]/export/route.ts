@@ -737,23 +737,27 @@ function generateWorkStagesTable(workStagesData: any): Table {
 
 // Helper to generate Technical Particular & Guarantee (TPG) Table
 function generateTpgTable(items: any[]): Table {
+  const cellMargin = { top: 150, bottom: 150, left: 100, right: 100 };
+  const headerSize = 24; // 12pt
+  const contentSize = 22; // 11pt
+
   const rows = [
     new TableRow({
       children: [
-        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "No.", bold: true, font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })], width: { size: 5, type: WidthType.PERCENTAGE } }),
-        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Spesifikasi", bold: true, font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })], width: { size: 35, type: WidthType.PERCENTAGE } }),
-        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Owner Request", bold: true, font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })], width: { size: 30, type: WidthType.PERCENTAGE } }),
-        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Vendor Proposed & Guarantee", bold: true, font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })], width: { size: 30, type: WidthType.PERCENTAGE } }),
+        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "No.", bold: true, font: "Arial", size: headerSize })], alignment: AlignmentType.CENTER })], width: { size: 5, type: WidthType.PERCENTAGE }, margins: cellMargin, shading: { fill: "F3F4F6", color: "auto" } }),
+        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Spesifikasi", bold: true, font: "Arial", size: headerSize })], alignment: AlignmentType.CENTER })], width: { size: 35, type: WidthType.PERCENTAGE }, margins: cellMargin, shading: { fill: "F3F4F6", color: "auto" } }),
+        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Owner Request", bold: true, font: "Arial", size: headerSize })], alignment: AlignmentType.CENTER })], width: { size: 30, type: WidthType.PERCENTAGE }, margins: cellMargin, shading: { fill: "F3F4F6", color: "auto" } }),
+        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Vendor Proposed & Guarantee", bold: true, font: "Arial", size: headerSize })], alignment: AlignmentType.CENTER })], width: { size: 30, type: WidthType.PERCENTAGE }, margins: cellMargin, shading: { fill: "F3F4F6", color: "auto" } }),
       ],
       tableHeader: true,
     }),
     ...items.map((item, index) => 
       new TableRow({
         children: [
-          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: (index + 1).toString(), font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })] }),
-          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: item.specification || "", font: "Arial", size: 20 })] })] }),
-          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: item.ownerRequest || "", font: "Arial", size: 20 })] })] }),
-          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: item.vendorProposed || "", font: "Arial", size: 20 })] })] }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: (index + 1).toString(), font: "Arial", size: contentSize })], alignment: AlignmentType.CENTER })], margins: cellMargin }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: item.specification || "", font: "Arial", size: contentSize })] })], margins: cellMargin }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: item.ownerRequest || "", font: "Arial", size: contentSize })] })], margins: cellMargin }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: item.vendorProposed || "", font: "Arial", size: contentSize })] })], margins: cellMargin }),
         ],
       })
     ),
@@ -763,29 +767,33 @@ function generateTpgTable(items: any[]): Table {
 
 // Helper to generate Inspection Testing Plan (ITP) Table
 function generateItpTable(items: any[]): Table {
+  const cellMargin = { top: 150, bottom: 150, left: 100, right: 100 };
+  const headerSize = 24; // 12pt
+  const contentSize = 22; // 11pt
+
   const rows = [
     new TableRow({
       children: [
-        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "No.", bold: true, font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })], width: { size: 5, type: WidthType.PERCENTAGE } }),
-        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Testing Items", bold: true, font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })], width: { size: 18, type: WidthType.PERCENTAGE } }),
-        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Testing Method", bold: true, font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })], width: { size: 15, type: WidthType.PERCENTAGE } }),
-        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Standard Test Reference", bold: true, font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })], width: { size: 17, type: WidthType.PERCENTAGE } }),
-        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Tested by", bold: true, font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })], width: { size: 12, type: WidthType.PERCENTAGE } }),
-        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Witness by", bold: true, font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })], width: { size: 12, type: WidthType.PERCENTAGE } }),
-        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Acceptance Criteria Requirements", bold: true, font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })], width: { size: 21, type: WidthType.PERCENTAGE } }),
+        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "No.", bold: true, font: "Arial", size: headerSize })], alignment: AlignmentType.CENTER })], width: { size: 5, type: WidthType.PERCENTAGE }, margins: cellMargin, shading: { fill: "F3F4F6", color: "auto" } }),
+        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Testing Items", bold: true, font: "Arial", size: headerSize })], alignment: AlignmentType.CENTER })], width: { size: 18, type: WidthType.PERCENTAGE }, margins: cellMargin, shading: { fill: "F3F4F6", color: "auto" } }),
+        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Testing Method", bold: true, font: "Arial", size: headerSize })], alignment: AlignmentType.CENTER })], width: { size: 15, type: WidthType.PERCENTAGE }, margins: cellMargin, shading: { fill: "F3F4F6", color: "auto" } }),
+        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Standard Test Reference", bold: true, font: "Arial", size: headerSize })], alignment: AlignmentType.CENTER })], width: { size: 17, type: WidthType.PERCENTAGE }, margins: cellMargin, shading: { fill: "F3F4F6", color: "auto" } }),
+        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Tested by", bold: true, font: "Arial", size: headerSize })], alignment: AlignmentType.CENTER })], width: { size: 12, type: WidthType.PERCENTAGE }, margins: cellMargin, shading: { fill: "F3F4F6", color: "auto" } }),
+        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Witness by", bold: true, font: "Arial", size: headerSize })], alignment: AlignmentType.CENTER })], width: { size: 12, type: WidthType.PERCENTAGE }, margins: cellMargin, shading: { fill: "F3F4F6", color: "auto" } }),
+        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Acceptance Criteria Requirements", bold: true, font: "Arial", size: headerSize })], alignment: AlignmentType.CENTER })], width: { size: 21, type: WidthType.PERCENTAGE }, margins: cellMargin, shading: { fill: "F3F4F6", color: "auto" } }),
       ],
       tableHeader: true,
     }),
     ...items.map((item, index) => 
       new TableRow({
         children: [
-          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: (index + 1).toString(), font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })] }),
-          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: item.testingItem || "", font: "Arial", size: 20 })] })] }),
-          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: item.testingMethod || "", font: "Arial", size: 20 })] })] }),
-          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: item.standardTestReference || "", font: "Arial", size: 20 })] })] }),
-          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: item.testedBy || "", font: "Arial", size: 20 })] })] }),
-          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: item.witnessBy || "", font: "Arial", size: 20 })] })] }),
-          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: item.acceptanceCriteria || "", font: "Arial", size: 20 })] })] }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: (index + 1).toString(), font: "Arial", size: contentSize })], alignment: AlignmentType.CENTER })], margins: cellMargin }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: item.testingItem || "", font: "Arial", size: contentSize })] })], margins: cellMargin }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: item.testingMethod || "", font: "Arial", size: contentSize })] })], margins: cellMargin }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: item.standardTestReference || "", font: "Arial", size: contentSize })] })], margins: cellMargin }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: item.testedBy || "", font: "Arial", size: contentSize })] })], margins: cellMargin }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: item.witnessBy || "", font: "Arial", size: contentSize })] })], margins: cellMargin }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: item.acceptanceCriteria || "", font: "Arial", size: contentSize })] })], margins: cellMargin }),
         ],
       })
     ),
@@ -795,21 +803,25 @@ function generateItpTable(items: any[]): Table {
 
 // Helper to generate Document Request Sheet (DRS) Table
 function generateDrsTable(items: any[]): Table {
+  const cellMargin = { top: 150, bottom: 150, left: 100, right: 100 };
+  const headerSize = 24; // 12pt
+  const contentSize = 22; // 11pt
+
   const rows = [
     new TableRow({
       children: [
-        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "No.", bold: true, font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })], width: { size: 5, type: WidthType.PERCENTAGE } }),
-        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Document Requirement", bold: true, font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })], width: { size: 60, type: WidthType.PERCENTAGE } }),
-        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Document Types", bold: true, font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })], width: { size: 35, type: WidthType.PERCENTAGE } }),
+        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "No.", bold: true, font: "Arial", size: headerSize })], alignment: AlignmentType.CENTER })], width: { size: 5, type: WidthType.PERCENTAGE }, margins: cellMargin, shading: { fill: "F3F4F6", color: "auto" } }),
+        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Document Requirement", bold: true, font: "Arial", size: headerSize })], alignment: AlignmentType.CENTER })], width: { size: 60, type: WidthType.PERCENTAGE }, margins: cellMargin, shading: { fill: "F3F4F6", color: "auto" } }),
+        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Document Types", bold: true, font: "Arial", size: headerSize })], alignment: AlignmentType.CENTER })], width: { size: 35, type: WidthType.PERCENTAGE }, margins: cellMargin, shading: { fill: "F3F4F6", color: "auto" } }),
       ],
       tableHeader: true,
     }),
     ...items.map((item, index) => 
       new TableRow({
         children: [
-          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: (index + 1).toString(), font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })] }),
-          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: item.documentRequirement || "", font: "Arial", size: 20 })] })] }),
-          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: item.documentType || "", font: "Arial", size: 20 })] })] }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: (index + 1).toString(), font: "Arial", size: contentSize })], alignment: AlignmentType.CENTER })], margins: cellMargin }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: item.documentRequirement || "", font: "Arial", size: contentSize })] })], margins: cellMargin }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: item.documentType || "", font: "Arial", size: contentSize })] })], margins: cellMargin }),
         ],
       })
     ),
@@ -819,27 +831,31 @@ function generateDrsTable(items: any[]): Table {
 
 // Helper to generate Performance Guarantee Requirement Sheet (PGRS) Table
 function generatePgrsTable(items: any[]): Table {
+  const cellMargin = { top: 150, bottom: 150, left: 100, right: 100 };
+  const headerSize = 24; // 12pt
+  const contentSize = 22; // 11pt
+
   const rows = [
     new TableRow({
       children: [
-        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "No.", bold: true, font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })], width: { size: 5, type: WidthType.PERCENTAGE } }),
-        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Plant Item", bold: true, font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })], width: { size: 19, type: WidthType.PERCENTAGE } }),
-        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Performance Guarantee Parameter (s)", bold: true, font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })], width: { size: 19, type: WidthType.PERCENTAGE } }),
-        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Baseline Parameter (s)", bold: true, font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })], width: { size: 19, type: WidthType.PERCENTAGE } }),
-        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Verification Method", bold: true, font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })], width: { size: 19, type: WidthType.PERCENTAGE } }),
-        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Remedial Measure Allowed", bold: true, font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })], width: { size: 19, type: WidthType.PERCENTAGE } }),
+        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "No.", bold: true, font: "Arial", size: headerSize })], alignment: AlignmentType.CENTER })], width: { size: 5, type: WidthType.PERCENTAGE }, margins: cellMargin, shading: { fill: "F3F4F6", color: "auto" } }),
+        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Plant Item", bold: true, font: "Arial", size: headerSize })], alignment: AlignmentType.CENTER })], width: { size: 19, type: WidthType.PERCENTAGE }, margins: cellMargin, shading: { fill: "F3F4F6", color: "auto" } }),
+        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Performance Guarantee Parameter (s)", bold: true, font: "Arial", size: headerSize })], alignment: AlignmentType.CENTER })], width: { size: 19, type: WidthType.PERCENTAGE }, margins: cellMargin, shading: { fill: "F3F4F6", color: "auto" } }),
+        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Baseline Parameter (s)", bold: true, font: "Arial", size: headerSize })], alignment: AlignmentType.CENTER })], width: { size: 19, type: WidthType.PERCENTAGE }, margins: cellMargin, shading: { fill: "F3F4F6", color: "auto" } }),
+        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Verification Method", bold: true, font: "Arial", size: headerSize })], alignment: AlignmentType.CENTER })], width: { size: 19, type: WidthType.PERCENTAGE }, margins: cellMargin, shading: { fill: "F3F4F6", color: "auto" } }),
+        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Remedial Measure Allowed", bold: true, font: "Arial", size: headerSize })], alignment: AlignmentType.CENTER })], width: { size: 19, type: WidthType.PERCENTAGE }, margins: cellMargin, shading: { fill: "F3F4F6", color: "auto" } }),
       ],
       tableHeader: true,
     }),
     ...items.map((item, index) => 
       new TableRow({
         children: [
-          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: (index + 1).toString(), font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })] }),
-          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: item.plantItem || "", font: "Arial", size: 20 })] })] }),
-          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: item.performanceParameter || "", font: "Arial", size: 20 })] })] }),
-          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: item.baselineParameter || "", font: "Arial", size: 20 })] })] }),
-          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: item.verificationMethod || "", font: "Arial", size: 20 })] })] }),
-          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: item.remedialMeasure || "", font: "Arial", size: 20 })] })] }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: (index + 1).toString(), font: "Arial", size: contentSize })], alignment: AlignmentType.CENTER })], margins: cellMargin }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: item.plantItem || "", font: "Arial", size: contentSize })] })], margins: cellMargin }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: item.performanceParameter || "", font: "Arial", size: contentSize })] })], margins: cellMargin }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: item.baselineParameter || "", font: "Arial", size: contentSize })] })], margins: cellMargin }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: item.verificationMethod || "", font: "Arial", size: contentSize })] })], margins: cellMargin }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: item.remedialMeasure || "", font: "Arial", size: contentSize })] })], margins: cellMargin }),
         ],
       })
     ),
