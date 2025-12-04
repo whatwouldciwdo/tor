@@ -16,6 +16,7 @@ import {
   WidthType,
   ImageRun,
   VerticalAlign,
+  HeightRule,
 } from "docx";
 import fs from "fs";
 import path from "path";
@@ -140,7 +141,7 @@ function parseHtmlToParagraphs(html: string | null): Array<Paragraph | Table> {
     return 'decimal';
   }
   
-  // ✅ NEW: Process table element with gray header background
+  // Process table element with gray header background
   function processTable(tableHtml: string): Table {
     console.log('   📊 Processing table');
     
@@ -189,7 +190,7 @@ function parseHtmlToParagraphs(html: string | null): Array<Paragraph | Table> {
               left: 100,
               right: 100,
             },
-            // ✅ Add gray background for header cells
+            // Add gray background for header cells
             shading: isHeader ? {
               fill: "D3D3D3", // Light gray color (same as Tiptap)
               color: "auto",
@@ -224,7 +225,7 @@ function parseHtmlToParagraphs(html: string | null): Array<Paragraph | Table> {
     });
   }
   
-  // ✅ NEW: Process image element with base64 support
+  // Process image element with base64 support
   function processImage(imgTag: string): Paragraph {
     const srcMatch = imgTag.match(/src=["']([^"']+)["']/i);
     const altMatch = imgTag.match(/alt=["']([^"']+)["']/i);
@@ -317,7 +318,7 @@ function parseHtmlToParagraphs(html: string | null): Array<Paragraph | Table> {
     );
   }
   
-  // ✅ Find all top-level elements and their positions
+  // Find all top-level elements and their positions
   const elements: Array<{ 
     type: string; 
     index: number; 
@@ -362,7 +363,7 @@ function parseHtmlToParagraphs(html: string | null): Array<Paragraph | Table> {
     });
   }
   
-  // ✅ NEW: Find all <img> tags
+  // Find all <img> tags
   const imgRegex = /<img[^>]*>/gi;
   let imgMatch;
   while ((imgMatch = imgRegex.exec(html)) !== null) {
@@ -375,7 +376,7 @@ function parseHtmlToParagraphs(html: string | null): Array<Paragraph | Table> {
     });
   }
   
-  // ✅ NEW: Find all <table> tags
+  // Find all <table> tags
   const tableRegex = /<table[^>]*>([\s\S]*?)<\/table>/gi;
   let tableMatch;
   while ((tableMatch = tableRegex.exec(html)) !== null) {
@@ -393,11 +394,11 @@ function parseHtmlToParagraphs(html: string | null): Array<Paragraph | Table> {
   
   console.log(`📋 Found ${elements.length} elements`);
   
-  // ✅ Process each element in order
+  // Process each element in order
   elements.forEach((element, idx) => {
     
     if (element.type === 'ol') {
-      // ✅ Skip if overlapping (for nested lists)
+      // Skip if overlapping (for nested lists)
       if (isOverlapping(element.index, element.index + element.length)) {
         console.log(`   ⏭️ Skipping overlapping ${element.type} at position ${element.index}`);
         return;
@@ -447,7 +448,7 @@ function parseHtmlToParagraphs(html: string | null): Array<Paragraph | Table> {
       });
       
     } else if (element.type === 'ul') {
-      // ✅ Skip if overlapping (for nested lists)
+      // Skip if overlapping (for nested lists)
       if (isOverlapping(element.index, element.index + element.length)) {
         console.log(`   ⏭️ Skipping overlapping ${element.type} at position ${element.index}`);
         return;
@@ -493,7 +494,7 @@ function parseHtmlToParagraphs(html: string | null): Array<Paragraph | Table> {
       });
       
     } else if (element.type === 'img') {
-      // ✅ Images should NEVER be skipped
+      // Images should NEVER be skipped
       console.log(`${idx + 1}. 🖼️ Image element`);
       
       const imageParagraph = processImage(element.content!);
@@ -502,7 +503,7 @@ function parseHtmlToParagraphs(html: string | null): Array<Paragraph | Table> {
       // Don't add to processedRanges - images are standalone
       
     } else if (element.type === 'table') {
-      // ✅ Tables should NEVER be skipped
+      // Tables should NEVER be skipped
       console.log(`${idx + 1}. 📊 Table element`);
       
       const table = processTable(element.content!);
@@ -514,7 +515,7 @@ function parseHtmlToParagraphs(html: string | null): Array<Paragraph | Table> {
       });
       
     } else if (element.type === 'p') {
-      // ✅ Skip if overlapping (for paragraphs inside lists)
+      // Skip if overlapping (for paragraphs inside lists)
       if (isOverlapping(element.index, element.index + element.length)) {
         console.log(`   ⏭️ Skipping overlapping ${element.type} at position ${element.index}`);
         return;
@@ -575,13 +576,11 @@ function loadCoverImage(coverImagePath: string | null): {
   }
 
   try {
-    // Handle path - remove leading slash if exists
-    let imagePath = coverImagePath.startsWith('/') 
-      ? coverImagePath.slice(1) 
-      : coverImagePath;
+    // ✅ FIX: Normalize path - remove leading slashes
+    const normalizedPath = coverImagePath.replace(/^\/+/, '');
     
     // Build full path from project root
-    const fullImagePath = path.join(process.cwd(), "public", imagePath);
+    const fullImagePath = path.join(process.cwd(), "public", normalizedPath);
     
     console.log("🖼️  Attempting to load cover image from:", fullImagePath);
     
@@ -599,7 +598,7 @@ function loadCoverImage(coverImagePath: string | null): {
     const imageBuffer = fs.readFileSync(fullImagePath);
     
     // Detect image type from extension
-    const ext = path.extname(imagePath).toLowerCase();
+    const ext = path.extname(normalizedPath).toLowerCase();
     let imageType: "jpg" | "png" | "gif" | "bmp" = "jpg";
     
     if (ext === ".png") imageType = "png";
@@ -622,7 +621,7 @@ function loadCoverImage(coverImagePath: string | null): {
   }
 }
 
-// ✅ NEW: Generate Work Stages Gantt Table
+// Generate Work Stages Gantt Table
 function generateWorkStagesTable(workStagesData: any): Table {
   if (!workStagesData || !workStagesData.years || !workStagesData.rows) {
     return new Table({
@@ -647,21 +646,21 @@ function generateWorkStagesTable(workStagesData: any): Table {
       children: [new Paragraph({ children: [new TextRun({ text: "No", bold: true, font: "Arial", size: 16, color: "000000" })], alignment: AlignmentType.CENTER })],
       rowSpan: 2,
       verticalAlign: VerticalAlign.CENTER,
-      width: { size: 4, type: WidthType.PERCENTAGE }, // Reduced to 4%
-      shading: { fill: "22D3EE", color: "auto" }, // Cyan-400
+      width: { size: 4, type: WidthType.PERCENTAGE },
+      shading: { fill: "22D3EE", color: "auto" },
     }),
     new TableCell({
       children: [new Paragraph({ children: [new TextRun({ text: "Deskripsi", bold: true, font: "Arial", size: 16, color: "000000" })], alignment: AlignmentType.CENTER })],
       rowSpan: 2,
       verticalAlign: VerticalAlign.CENTER,
-      width: { size: 20, type: WidthType.PERCENTAGE }, // Reduced to 20%
-      shading: { fill: "22D3EE", color: "auto" }, // Cyan-400
+      width: { size: 20, type: WidthType.PERCENTAGE },
+      shading: { fill: "22D3EE", color: "auto" },
     }),
   ];
 
   // Calculate total months to distribute remaining width
   const totalMonths = years.reduce((acc: number, year: any) => acc + year.months.length, 0);
-  const remainingWidth = 76; // 100 - 4 - 20
+  const remainingWidth = 76;
   const monthWidth = totalMonths > 0 ? remainingWidth / totalMonths : 0;
 
   // Add Year headers
@@ -669,8 +668,8 @@ function generateWorkStagesTable(workStagesData: any): Table {
     headerRow1Cells.push(
       new TableCell({
         children: [new Paragraph({ children: [new TextRun({ text: year.label, bold: true, font: "Arial", size: 16, color: "000000" })], alignment: AlignmentType.CENTER })],
-        columnSpan: year.months.length, // Span actual number of months
-        shading: { fill: "22D3EE", color: "auto" }, // Cyan-400
+        columnSpan: year.months.length,
+        shading: { fill: "22D3EE", color: "auto" },
       })
     );
   });
@@ -683,7 +682,7 @@ function generateWorkStagesTable(workStagesData: any): Table {
         new TableCell({
           children: [new Paragraph({ children: [new TextRun({ text: month, size: 12, font: "Arial", color: "000000" })], alignment: AlignmentType.CENTER })],
           width: { size: monthWidth, type: WidthType.PERCENTAGE },
-          shading: { fill: "22D3EE", color: "auto" }, // Cyan-400
+          shading: { fill: "22D3EE", color: "auto" },
         })
       );
     });
@@ -707,7 +706,7 @@ function generateWorkStagesTable(workStagesData: any): Table {
         cells.push(
           new TableCell({
             children: [new Paragraph("")],
-            shading: isActive ? { fill: "00FF00", color: "auto" } : undefined, // Green if active
+            shading: isActive ? { fill: "00FF00", color: "auto" } : undefined,
           })
         );
       });
@@ -732,6 +731,380 @@ function generateWorkStagesTable(workStagesData: any): Table {
       insideVertical: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
     },
   });
+}
+
+// === TAB 6 LAMPIRAN TABLE GENERATORS ===
+
+// Helper to generate Technical Particular & Guarantee (TPG) Table
+function generateTpgTable(items: any[]): Table {
+  const rows = [
+    new TableRow({
+      children: [
+        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "No.", bold: true, font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })], width: { size: 5, type: WidthType.PERCENTAGE } }),
+        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Spesifikasi", bold: true, font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })], width: { size: 35, type: WidthType.PERCENTAGE } }),
+        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Owner Request", bold: true, font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })], width: { size: 30, type: WidthType.PERCENTAGE } }),
+        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Vendor Proposed & Guarantee", bold: true, font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })], width: { size: 30, type: WidthType.PERCENTAGE } }),
+      ],
+      tableHeader: true,
+    }),
+    ...items.map((item, index) => 
+      new TableRow({
+        children: [
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: (index + 1).toString(), font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })] }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: item.specification || "", font: "Arial", size: 20 })] })] }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: item.ownerRequest || "", font: "Arial", size: 20 })] })] }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: item.vendorProposed || "", font: "Arial", size: 20 })] })] }),
+        ],
+      })
+    ),
+  ];
+  return new Table({ rows, width: { size: 100, type: WidthType.PERCENTAGE } });
+}
+
+// Helper to generate Inspection Testing Plan (ITP) Table
+function generateItpTable(items: any[]): Table {
+  const rows = [
+    new TableRow({
+      children: [
+        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "No.", bold: true, font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })], width: { size: 5, type: WidthType.PERCENTAGE } }),
+        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Testing Items", bold: true, font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })], width: { size: 18, type: WidthType.PERCENTAGE } }),
+        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Testing Method", bold: true, font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })], width: { size: 15, type: WidthType.PERCENTAGE } }),
+        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Standard Test Reference", bold: true, font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })], width: { size: 17, type: WidthType.PERCENTAGE } }),
+        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Tested by", bold: true, font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })], width: { size: 12, type: WidthType.PERCENTAGE } }),
+        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Witness by", bold: true, font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })], width: { size: 12, type: WidthType.PERCENTAGE } }),
+        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Acceptance Criteria Requirements", bold: true, font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })], width: { size: 21, type: WidthType.PERCENTAGE } }),
+      ],
+      tableHeader: true,
+    }),
+    ...items.map((item, index) => 
+      new TableRow({
+        children: [
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: (index + 1).toString(), font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })] }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: item.testingItem || "", font: "Arial", size: 20 })] })] }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: item.testingMethod || "", font: "Arial", size: 20 })] })] }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: item.standardTestReference || "", font: "Arial", size: 20 })] })] }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: item.testedBy || "", font: "Arial", size: 20 })] })] }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: item.witnessBy || "", font: "Arial", size: 20 })] })] }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: item.acceptanceCriteria || "", font: "Arial", size: 20 })] })] }),
+        ],
+      })
+    ),
+  ];
+  return new Table({ rows, width: { size: 100, type: WidthType.PERCENTAGE } });
+}
+
+// Helper to generate Document Request Sheet (DRS) Table
+function generateDrsTable(items: any[]): Table {
+  const rows = [
+    new TableRow({
+      children: [
+        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "No.", bold: true, font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })], width: { size: 5, type: WidthType.PERCENTAGE } }),
+        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Document Requirement", bold: true, font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })], width: { size: 60, type: WidthType.PERCENTAGE } }),
+        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Document Types", bold: true, font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })], width: { size: 35, type: WidthType.PERCENTAGE } }),
+      ],
+      tableHeader: true,
+    }),
+    ...items.map((item, index) => 
+      new TableRow({
+        children: [
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: (index + 1).toString(), font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })] }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: item.documentRequirement || "", font: "Arial", size: 20 })] })] }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: item.documentType || "", font: "Arial", size: 20 })] })] }),
+        ],
+      })
+    ),
+  ];
+  return new Table({ rows, width: { size: 100, type: WidthType.PERCENTAGE } });
+}
+
+// Helper to generate Performance Guarantee Requirement Sheet (PGRS) Table
+function generatePgrsTable(items: any[]): Table {
+  const rows = [
+    new TableRow({
+      children: [
+        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "No.", bold: true, font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })], width: { size: 5, type: WidthType.PERCENTAGE } }),
+        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Plant Item", bold: true, font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })], width: { size: 19, type: WidthType.PERCENTAGE } }),
+        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Performance Guarantee Parameter (s)", bold: true, font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })], width: { size: 19, type: WidthType.PERCENTAGE } }),
+        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Baseline Parameter (s)", bold: true, font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })], width: { size: 19, type: WidthType.PERCENTAGE } }),
+        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Verification Method", bold: true, font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })], width: { size: 19, type: WidthType.PERCENTAGE } }),
+        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Remedial Measure Allowed", bold: true, font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })], width: { size: 19, type: WidthType.PERCENTAGE } }),
+      ],
+      tableHeader: true,
+    }),
+    ...items.map((item, index) => 
+      new TableRow({
+        children: [
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: (index + 1).toString(), font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })] }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: item.plantItem || "", font: "Arial", size: 20 })] })] }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: item.performanceParameter || "", font: "Arial", size: 20 })] })] }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: item.baselineParameter || "", font: "Arial", size: 20 })] })] }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: item.verificationMethod || "", font: "Arial", size: 20 })] })] }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: item.remedialMeasure || "", font: "Arial", size: 20 })] })] }),
+        ],
+      })
+    ),
+  ];
+  return new Table({ rows, width: { size: 100, type: WidthType.PERCENTAGE } });
+}
+
+// Generate Lembar Pengesahan Table
+function generateLembarPengesahanTable(
+  approvalSignatures: any[],
+  torTitle: string
+): Array<Paragraph | Table> {
+  const content: Array<Paragraph | Table> = [];
+  
+  // Add title (page break handled by section)
+  content.push(
+    new Paragraph({
+      children: [
+        new TextRun({
+          text: "LEMBAR PENGESAHAN",
+          font: "Arial",
+          size: 24,
+          bold: true,
+        }),
+      ],
+      alignment: AlignmentType.CENTER,
+      spacing: { before: 200, after: 200 },
+    }),
+    new Paragraph({
+      children: [
+        new TextRun({
+          text: torTitle,
+          font: "Arial",
+          size: 20,
+          bold: true,
+        }),
+      ],
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 400 },
+    })
+  );
+  
+  // Group signatures by role
+  const signaturesByRole = {
+    "Dibuat oleh": approvalSignatures.filter(s => s.role === "Dibuat oleh"),
+    "Diperiksa oleh": approvalSignatures.filter(s => s.role === "Diperiksa oleh"),
+    "Disetujui oleh": approvalSignatures.filter(s => s.role === "Disetujui oleh"),
+  };
+  
+  // Generate table for each signature
+  Object.entries(signaturesByRole).forEach(([role, sigs]) => {
+    sigs.forEach((sig: any) => {
+      const dateText = sig.date ? new Date(sig.date).toLocaleDateString("id-ID", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric"
+      }) : "";
+      
+      const rows: TableRow[] = [
+        // Row 1: Role label
+        new TableRow({
+          children: [
+            new TableCell({
+              children: [
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: role,
+                      font: "Arial",
+                      size: 20,
+                    }),
+                  ],
+                }),
+              ],
+              width: { size: 25, type: WidthType.PERCENTAGE },
+              borders: {
+                top: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+                bottom: { style: BorderStyle.NONE },
+                left: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+                right: { style: BorderStyle.NONE },
+              },
+            }),
+            new TableCell({
+              children: [
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: ":",
+                      font: "Arial",
+                      size: 20,
+                    }),
+                  ],
+                  alignment: AlignmentType.CENTER,
+                }),
+              ],
+              width: { size: 2, type: WidthType.PERCENTAGE },
+              borders: {
+                top: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+                bottom: { style: BorderStyle.NONE },
+                left: { style: BorderStyle.NONE },
+                right: { style: BorderStyle.NONE },
+              },
+            }),
+            new TableCell({
+              children: [new Paragraph("")],
+              width: { size: 73, type: WidthType.PERCENTAGE },
+              borders: {
+                top: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+                bottom: { style: BorderStyle.NONE },
+                left: { style: BorderStyle.NONE },
+                right: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+              },
+            }),
+          ],
+        }),
+        // Row 2: Date
+        new TableRow({
+          children: [
+            new TableCell({
+              children: [
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: "Tanggal",
+                      font: "Arial",
+                      size: 20,
+                    }),
+                  ],
+                }),
+              ],
+              borders: {
+                top: { style: BorderStyle.NONE },
+                bottom: { style: BorderStyle.NONE },
+                left: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+                right: { style: BorderStyle.NONE },
+              },
+            }),
+            new TableCell({
+              children: [
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: ":",
+                      font: "Arial",
+                      size: 20,
+                    }),
+                  ],
+                  alignment: AlignmentType.CENTER,
+                }),
+              ],
+              borders: {
+                top: { style: BorderStyle.NONE },
+                bottom: { style: BorderStyle.NONE },
+                left: { style: BorderStyle.NONE },
+                right: { style: BorderStyle.NONE },
+              },
+            }),
+            new TableCell({
+              children: [
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: dateText,
+                      font: "Arial",
+                      size: 20,
+                    }),
+                  ],
+                }),
+              ],
+              borders: {
+                top: { style: BorderStyle.NONE },
+                bottom: { style: BorderStyle.NONE },
+                left: { style: BorderStyle.NONE },
+                right: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+              },
+            }),
+          ],
+        }),
+        // Row 3: Position (centered, merged cell)
+        new TableRow({
+          children: [
+            new TableCell({
+              children: [
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: sig.position || "",
+                      font: "Arial",
+                      size: 20,
+                    }),
+                  ],
+                  alignment: AlignmentType.CENTER,
+                }),
+              ],
+              columnSpan: 3,
+              borders: {
+                top: { style: BorderStyle.NONE },
+                bottom: { style: BorderStyle.NONE },
+                left: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+                right: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+              },
+            }),
+          ],
+        }),
+        // Row 4: Signature space (single empty row with large height)
+        new TableRow({
+          height: { value: 1700, rule: HeightRule.AT_LEAST },
+          children: [
+            new TableCell({
+              children: [new Paragraph("")],
+              columnSpan: 3,
+              borders: {
+                top: { style: BorderStyle.NONE },
+                bottom: { style: BorderStyle.NONE },
+                left: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+                right: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+              },
+            }),
+          ],
+        }),
+        // Row 7: Name (centered, underlined, merged cell)
+        new TableRow({
+          children: [
+            new TableCell({
+              children: [
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: sig.name || "",
+                      font: "Arial",
+                      size: 20,
+                      underline: {},
+                    }),
+                  ],
+                  alignment: AlignmentType.CENTER,
+                }),
+              ],
+              columnSpan: 3,
+              borders: {
+                top: { style: BorderStyle.NONE },
+                bottom: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+                left: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+                right: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+              },
+            }),
+          ],
+        }),
+      ];
+      
+      content.push(
+        new Table({
+          rows,
+          width: { size: 70, type: WidthType.PERCENTAGE },
+          alignment: AlignmentType.CENTER,
+        }),
+        // Add spacing between tables
+        new Paragraph({
+          children: [new TextRun({ text: "", font: "Arial", size: 20 })],
+          spacing: { before: 200, after: 200 },
+        })
+      );
+    });
+  });
+  
+  return content;
 }
 
 export async function GET(
@@ -766,9 +1139,6 @@ export async function GET(
     console.log("📄 Exporting TOR:", tor.title);
     console.log("   - ID:", tor.id);
     console.log("   - 🖼️  Cover Image Path:", tor.coverImage || "(none)");
-    console.log("   - Cover Image type:", typeof tor.coverImage);
-    console.log("   - Has coverImage:", !!tor.coverImage);
-    console.log("   - Cover Image length:", tor.coverImage?.length || 0);
 
     // Read Logo Images
     const plnLogoPath = path.join(process.cwd(), "public", "logo-pln-horizontal.jpg");
@@ -802,8 +1172,8 @@ export async function GET(
               new ImageRun({
                 data: coverImageResult.buffer,
                 transformation: { 
-                  width: 450,  // Width in pixels
-                  height: 300  // Height in pixels
+                  width: 450,
+                  height: 300
                 },
                 type: coverImageResult.type,
               }),
@@ -838,10 +1208,10 @@ export async function GET(
           properties: {
             page: {
               margin: {
-                top: 1701, // ~3cm
-                right: 1558, // ~2.75cm
-                bottom: 1701, // ~3cm
-                left: 2268, // ~4cm
+                top: 1701,
+                right: 1558,
+                bottom: 1701,
+                left: 2268,
               },
             },
             titlePage: true,
@@ -1192,7 +1562,7 @@ export async function GET(
               spacing: { before: 200, after: 100 },
             }),
             generateWorkStagesTable(tor.workStagesData),
-            new Paragraph({ children: [], spacing: { after: 200 } }), // Spacing after table
+            new Paragraph({ children: [], spacing: { after: 200 } }),
             ...parseHtmlToParagraphs(tor.workStagesExplanation),
 
             // 8. PERSYARATAN PENGIRIMAN
@@ -1237,25 +1607,488 @@ export async function GET(
             }),
             ...parseHtmlToParagraphs(tor.handoverMechanism),
 
-            // 11. SPESIFIKASI TEKNIS
-            new Paragraph({
-              children: [
-                new TextRun({
-                  text: "11. SPESIFIKASI TEKNIS",
-                  font: "Arial",
-                  size: 20,
-                  bold: true,
-                }),
-              ],
-              spacing: { before: 200, after: 100 },
-            }),
-            ...parseHtmlToParagraphs(tor.technicalSpec),
+            // ✅ 11. USULAN PELAKSANA DIREKSI (line ~1150)
+new Paragraph({
+  children: [
+    new TextRun({
+      text: "11. USULAN PELAKSANA DIREKSI PEKERJAAN DAN DIREKSI LAPANGAN",
+      font: "Arial",
+      size: 20,
+      bold: true,
+    }),
+  ],
+  spacing: { before: 200, after: 100 },
+}),
 
-            // 12. RENCANA ANGGARAN BIAYA (RAB)
+// Parse directorProposals and fieldDirectorProposals
+...(() => {
+  const directorProposals = tor.directorProposals || [];
+  const fieldDirectorProposals = tor.fieldDirectorProposals || [];
+  
+  // Validate array types
+  if (!Array.isArray(directorProposals) || !Array.isArray(fieldDirectorProposals)) {
+    return [new Paragraph({ 
+      children: [new TextRun({ text: "-", font: "Arial", size: 20 })],
+      spacing: { after: 100 }
+    })];
+  }
+  
+  // If both are empty
+  if (directorProposals.length === 0 && fieldDirectorProposals.length === 0) {
+    return [new Paragraph({ 
+      children: [new TextRun({ text: "-", font: "Arial", size: 20 })],
+      spacing: { after: 100 }
+    })];
+  }
+  
+  const paragraphs: Paragraph[] = [];
+  
+  // Add "Direksi Pekerjaan:" label
+  paragraphs.push(
+    new Paragraph({
+      children: [
+        new TextRun({ 
+          text: "Direksi Pekerjaan: ", 
+          bold: true, 
+          font: "Arial", 
+          size: 20,
+          underline: {}
+        }),
+      ],
+      spacing: { after: 50 },
+    })
+  );
+  
+  // List all directorProposals
+  directorProposals.forEach((director: any, i: number) => {
+    paragraphs.push(
+      new Paragraph({
+        children: [
+          new TextRun({ 
+            text: director.name || "-", 
+            font: "Arial", 
+            size: 20 
+          }),
+        ],
+        spacing: { after: 50 },
+      })
+    );
+  });
+  
+  // Add spacing
+  paragraphs.push(new Paragraph({ children: [], spacing: { after: 100 } }));
+  
+  // Add "Direksi Lapangan:" label
+  paragraphs.push(
+    new Paragraph({
+      children: [
+        new TextRun({ 
+          text: "Direksi Lapangan: ", 
+          bold: true, 
+          font: "Arial", 
+          size: 20,
+          underline: {}
+        }),
+      ],
+      spacing: { after: 50 },
+    })
+  );
+  
+  // List all fieldDirectorProposals
+  fieldDirectorProposals.forEach((director: any, i: number) => {
+    paragraphs.push(
+      new Paragraph({
+        children: [
+          new TextRun({ 
+            text: director.name || "-", 
+            font: "Arial", 
+            size: 20 
+          }),
+        ],
+        spacing: { after: 50 },
+      })
+    );
+  });
+  
+  return paragraphs;
+})(),
+
+// ✅ 12. PERSYARATAN CALON PENYEDIA
+new Paragraph({
+  children: [
+    new TextRun({
+      text: "12. PERSYARATAN CALON PENYEDIA",
+      font: "Arial",
+      size: 20,
+      bold: true,
+    }),
+  ],
+  spacing: { before: 200, after: 100 },
+}),
+...parseHtmlToParagraphs(tor.vendorRequirements),
+
+// ✅ 13. USULAN METODE PENGADAAN
+new Paragraph({
+  children: [
+    new TextRun({
+      text: "13. USULAN METODE PENGADAAN",
+      font: "Arial",
+      size: 20,
+      bold: true,
+    }),
+  ],
+  spacing: { before: 200, after: 100 },
+}),
+...parseHtmlToParagraphs(tor.procurementMethod),
+
+// ✅ 14. USULAN ATURAN PEMBAYARAN
+new Paragraph({
+  children: [
+    new TextRun({
+      text: "14. USULAN ATURAN PEMBAYARAN",
+      font: "Arial",
+      size: 20,
+      bold: true,
+    }),
+  ],
+  spacing: { before: 200, after: 100 },
+}),
+...parseHtmlToParagraphs(tor.paymentTerms),
+
+// ✅ 15. USULAN ATURAN DENDA
+new Paragraph({
+  children: [
+    new TextRun({
+      text: "15. USULAN ATURAN DENDA",
+      font: "Arial",
+      size: 20,
+      bold: true,
+    }),
+  ],
+  spacing: { before: 200, after: 100 },
+}),
+...parseHtmlToParagraphs(tor.penaltyRules),
+
+// ✅ 16. RENCANA ANGGARAN (MOVED FROM 11)
+new Paragraph({
+  children: [
+    new TextRun({
+      text: "16. RENCANA ANGGARAN",
+      font: "Arial",
+      size: 20,
+      bold: true,
+    }),
+  ],
+  spacing: { before: 200, after: 100 },
+}),
+
+// Budget Table
+new Table({
+  width: {
+    size: 100,
+    type: WidthType.PERCENTAGE,
+  },
+  rows: [
+    // Header
+    new TableRow({
+      children: [
+        new TableCell({
+          children: [new Paragraph({ children: [new TextRun({ text: "Item", bold: true, font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })],
+          width: { size: 5, type: WidthType.PERCENTAGE },
+          shading: { fill: "D3D3D3", color: "auto" },
+        }),
+        new TableCell({
+          children: [new Paragraph({ children: [new TextRun({ text: "Description", bold: true, font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })],
+          width: { size: 40, type: WidthType.PERCENTAGE },
+          shading: { fill: "D3D3D3", color: "auto" },
+        }),
+        new TableCell({
+          children: [new Paragraph({ children: [new TextRun({ text: "Quantity", bold: true, font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })],
+          width: { size: 10, type: WidthType.PERCENTAGE },
+          shading: { fill: "D3D3D3", color: "auto" },
+        }),
+        new TableCell({
+          children: [new Paragraph({ children: [new TextRun({ text: "Order Unit", bold: true, font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })],
+          width: { size: 10, type: WidthType.PERCENTAGE },
+          shading: { fill: "D3D3D3", color: "auto" },
+        }),
+        new TableCell({
+          children: [new Paragraph({ children: [new TextRun({ text: "Unit price IDR", bold: true, font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })],
+          width: { size: 15, type: WidthType.PERCENTAGE },
+          shading: { fill: "D3D3D3", color: "auto" },
+        }),
+        new TableCell({
+          children: [new Paragraph({ children: [new TextRun({ text: "Total Price IDR", bold: true, font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })],
+          width: { size: 20, type: WidthType.PERCENTAGE },
+          shading: { fill: "D3D3D3", color: "auto" },
+        }),
+      ],
+    }),
+    // Items
+    ...tor.budgetItems.map((item: any, index: number) => 
+      new TableRow({
+        children: [
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: (index + 1).toString(), font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })] }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: item.item, font: "Arial", size: 20 })] })] }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: item.quantity.toString(), font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })] }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: item.unit, font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })] }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: Number(item.unitPrice).toLocaleString("id-ID"), font: "Arial", size: 20 })], alignment: AlignmentType.RIGHT })] }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: Number(item.totalPrice).toLocaleString("id-ID"), font: "Arial", size: 20 })], alignment: AlignmentType.RIGHT })] }),
+        ],
+      })
+    ),
+    // Total Row
+    new TableRow({
+      children: [
+        new TableCell({ 
+          children: [new Paragraph({ children: [new TextRun({ text: "Total", bold: true, font: "Arial", size: 20 })], alignment: AlignmentType.RIGHT })],
+          columnSpan: 5,
+        }),
+        new TableCell({ 
+          children: [new Paragraph({ children: [new TextRun({ text: tor.subtotal ? Number(tor.subtotal).toLocaleString("id-ID") : "0", bold: true, font: "Arial", size: 20 })], alignment: AlignmentType.RIGHT })],
+        }),
+      ],
+    }),
+    // PPN Row
+    new TableRow({
+      children: [
+        new TableCell({ 
+          children: [new Paragraph({ children: [new TextRun({ text: "PPN 11%", bold: true, font: "Arial", size: 20 })], alignment: AlignmentType.RIGHT })],
+          columnSpan: 5,
+        }),
+        new TableCell({ 
+          children: [new Paragraph({ children: [new TextRun({ text: tor.ppn ? Number(tor.ppn).toLocaleString("id-ID") : "0", bold: true, font: "Arial", size: 20 })], alignment: AlignmentType.RIGHT })],
+        }),
+      ],
+    }),
+    // Grand Total Row
+    new TableRow({
+      children: [
+        new TableCell({ 
+          children: [new Paragraph({ children: [new TextRun({ text: "Grand Total", bold: true, font: "Arial", size: 20 })], alignment: AlignmentType.RIGHT })],
+          columnSpan: 5,
+        }),
+        new TableCell({ 
+          children: [new Paragraph({ children: [new TextRun({ text: tor.grandTotal ? Number(tor.grandTotal).toLocaleString("id-ID") : "0", bold: true, font: "Arial", size: 20 })], alignment: AlignmentType.RIGHT })],
+        }),
+      ],
+    }),
+  ],
+  borders: {
+    top: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+    bottom: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+    left: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+    right: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+    insideHorizontal: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+    insideVertical: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+  },
+}),
+
+// Summary text
+new Paragraph({
+  children: [
+    new TextRun({
+      text: `Rencana anggaran sebesar Rp. ${tor.grandTotal ? Number(tor.grandTotal).toLocaleString("id-ID") : "0"},00 termasuk ppn 11%.`,
+      font: "Arial",
+      size: 20,
+    }),
+  ],
+  spacing: { before: 200, after: 100 },
+}),
+
+// ✅ 17. PERSYARATAN LAINNYA
+new Paragraph({
+  children: [
+    new TextRun({
+      text: "17. PERSYARATAN LAINNYA",
+      font: "Arial",
+      size: 20,
+      bold: true,
+    }),
+  ],
+  spacing: { before: 200, after: 100 },
+}),
+...parseHtmlToParagraphs(tor.otherRequirements),
+
+
+
+            // Parse directorProposals and fieldDirectorProposals
+            ...(() => {
+              const directorProposals = tor.directorProposals || [];
+              const fieldDirectorProposals = tor.fieldDirectorProposals || [];
+              
+              // Validate array types
+              if (!Array.isArray(directorProposals) || !Array.isArray(fieldDirectorProposals)) {
+                return [new Paragraph({ 
+                  children: [new TextRun({ text: "-", font: "Arial", size: 20 })],
+                  spacing: { after: 100 }
+                })];
+              }
+              
+              // If both are empty
+              if (directorProposals.length === 0 && fieldDirectorProposals.length === 0) {
+                return [new Paragraph({ 
+                  children: [new TextRun({ text: "-", font: "Arial", size: 20 })],
+                  spacing: { after: 100 }
+                })];
+              }
+              
+              const paragraphs: Paragraph[] = [];
+              
+              // Combine both arrays
+              const maxLength = Math.max(directorProposals.length, fieldDirectorProposals.length);
+              
+              for (let i = 0; i < maxLength; i++) {
+                const directorWork = directorProposals[i]?.name || "-";
+                const directorField = fieldDirectorProposals[i]?.name || "-";
+              }
+              
+              return paragraphs;
+            })(),
+          ],
+        },
+        // === SECTION 2: LEMBAR PENGESAHAN (No Header) ===
+        {
+          properties: {
+            page: {
+              margin: {
+                top: 1440,
+                right: 1440,
+                bottom: 1440,
+                left: 1440,
+              },
+            },
+          },
+          headers: {
+            default: new Header({
+              children: [],
+            }),
+          },
+          children: [
+            ...generateLembarPengesahanTable(
+              tor.approvalSignatures || [],
+              tor.program || tor.title
+            ),
+          ],
+        },
+        // === SECTION 3: LAMPIRAN (With Header) ===
+        {
+          properties: {
+            page: {
+              margin: {
+                top: 1701,
+                right: 1558,
+                bottom: 1701,
+                left: 2268,
+              },
+            },
+          },
+          headers: {
+            default: new Header({
+              children: [
+                new Table({
+                  width: { size: 100, type: WidthType.PERCENTAGE },
+                  borders: {
+                    top: { style: BorderStyle.NONE },
+                    bottom: { style: BorderStyle.NONE },
+                    left: { style: BorderStyle.NONE },
+                    right: { style: BorderStyle.NONE },
+                    insideVertical: { style: BorderStyle.NONE },
+                    insideHorizontal: { style: BorderStyle.NONE },
+                  },
+                  rows: [
+                    new TableRow({
+                      children: [
+                        new TableCell({
+                          width: { size: 20, type: WidthType.PERCENTAGE },
+                          children: [
+                            plnLogoBuffer ? new Paragraph({
+                              children: [
+                                new ImageRun({
+                                  data: plnLogoBuffer,
+                                  transformation: { width: 80, height: 40 },
+                                  type: "jpg",
+                                }),
+                              ],
+                              alignment: AlignmentType.LEFT,
+                            }) : new Paragraph(""),
+                          ],
+                        }),
+                        new TableCell({
+                          width: { size: 60, type: WidthType.PERCENTAGE },
+                          children: [
+                            new Paragraph({
+                              children: [
+                                new TextRun({
+                                  text: `Term of Reference (TOR) ${tor.title}`,
+                                  font: "Arial",
+                                  size: 16,
+                                  italics: true,
+                                }),
+                              ],
+                              alignment: AlignmentType.CENTER,
+                            }),
+                          ],
+                          verticalAlign: VerticalAlign.CENTER,
+                        }),
+                        new TableCell({
+                          width: { size: 20, type: WidthType.PERCENTAGE },
+                          children: [
+                            secondaryLogoBuffer ? new Paragraph({
+                              children: [
+                                new ImageRun({
+                                  data: secondaryLogoBuffer,
+                                  transformation: { width: 20, height: 28 },
+                                  type: "png",
+                                }),
+                              ],
+                              alignment: AlignmentType.RIGHT,
+                            }) : new Paragraph(""),
+                          ],
+                        }),
+                      ],
+                    }),
+                  ],
+                }),
+              ],
+            }),
+          },
+          footers: {
+            default: new Footer({
+              children: [
+                new Paragraph({
+                  alignment: AlignmentType.CENTER,
+                  children: [
+                    new TextRun({
+                      children: ["Halaman ", PageNumber.CURRENT],
+                      font: "Arial",
+                      size: 18,
+                    }),
+                  ],
+                }),
+              ],
+            }),
+          },
+          children: [
+            // LAMPIRAN Title
             new Paragraph({
               children: [
                 new TextRun({
-                  text: "12. RENCANA ANGGARAN BIAYA (RAB)",
+                  text: "LAMPIRAN",
+                  font: "Arial",
+                  size: 24,
+                  bold: true,
+                }),
+              ],
+              alignment: AlignmentType.CENTER,
+              spacing: { before: 200, after: 400 },
+            }),
+
+            // 1. Technical Particular & Guarantee (TPG)
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: "1. Technical Particular & Guarantee (TPG)",
                   font: "Arial",
                   size: 20,
                   bold: true,
@@ -1263,68 +2096,57 @@ export async function GET(
               ],
               spacing: { before: 200, after: 100 },
             }),
-            new Table({
-              width: {
-                size: 100,
-                type: WidthType.PERCENTAGE,
-              },
-              rows: [
-                // Header
-                new TableRow({
-                  children: [
-                    new TableCell({
-                      children: [new Paragraph({ children: [new TextRun({ text: "No", bold: true, font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })],
-                      width: { size: 5, type: WidthType.PERCENTAGE },
-                    }),
-                    new TableCell({
-                      children: [new Paragraph({ children: [new TextRun({ text: "Uraian", bold: true, font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })],
-                      width: { size: 40, type: WidthType.PERCENTAGE },
-                    }),
-                    new TableCell({
-                      children: [new Paragraph({ children: [new TextRun({ text: "Vol", bold: true, font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })],
-                      width: { size: 10, type: WidthType.PERCENTAGE },
-                    }),
-                    new TableCell({
-                      children: [new Paragraph({ children: [new TextRun({ text: "Sat", bold: true, font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })],
-                      width: { size: 10, type: WidthType.PERCENTAGE },
-                    }),
-                    new TableCell({
-                      children: [new Paragraph({ children: [new TextRun({ text: "Harga Satuan", bold: true, font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })],
-                      width: { size: 15, type: WidthType.PERCENTAGE },
-                    }),
-                    new TableCell({
-                      children: [new Paragraph({ children: [new TextRun({ text: "Total", bold: true, font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })],
-                      width: { size: 20, type: WidthType.PERCENTAGE },
-                    }),
-                  ],
-                }),
-                // Items
-                ...tor.budgetItems.map((item: any, index: number) => 
-                  new TableRow({
-                    children: [
-                      new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: (index + 1).toString(), font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })] }),
-                      new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: item.item, font: "Arial", size: 20 })] })] }),
-                      new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: item.quantity.toString(), font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })] }),
-                      new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: item.unit, font: "Arial", size: 20 })], alignment: AlignmentType.CENTER })] }),
-                      new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: Number(item.unitPrice).toLocaleString("id-ID"), font: "Arial", size: 20 })], alignment: AlignmentType.RIGHT })] }),
-                      new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: Number(item.totalPrice).toLocaleString("id-ID"), font: "Arial", size: 20 })], alignment: AlignmentType.RIGHT })] }),
-                    ],
-                  })
-                ),
-                // Grand Total
-                new TableRow({
-                  children: [
-                    new TableCell({ 
-                      children: [new Paragraph({ children: [new TextRun({ text: "GRAND TOTAL", bold: true, font: "Arial", size: 20 })], alignment: AlignmentType.RIGHT })],
-                      columnSpan: 5,
-                    }),
-                    new TableCell({ 
-                      children: [new Paragraph({ children: [new TextRun({ text: tor.grandTotal ? Number(tor.grandTotal).toLocaleString("id-ID") : "0", bold: true, font: "Arial", size: 20 })], alignment: AlignmentType.RIGHT })],
-                    }),
-                  ],
+            ...((tor.technicalParticulars && Array.isArray(tor.technicalParticulars) && tor.technicalParticulars.length > 0)
+              ? [generateTpgTable(tor.technicalParticulars)]
+              : [new Paragraph({ text: "-", spacing: { after: 200 } })]),
+
+            // 2. Inspection Testing Plan (ITP)
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: "2. Inspection Testing Plan (ITP)",
+                  font: "Arial",
+                  size: 20,
+                  bold: true,
                 }),
               ],
+              spacing: { before: 400, after: 100 },
             }),
+            ...((tor.inspectionTestingPlans && Array.isArray(tor.inspectionTestingPlans) && tor.inspectionTestingPlans.length > 0)
+              ? [generateItpTable(tor.inspectionTestingPlans)]
+              : [new Paragraph({ text: "-", spacing: { after: 200 } })]),
+
+            // 3. Document Request Sheet (DRS)
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: "3. Document Request Sheet (DRS)",
+                  font: "Arial",
+                  size: 20,
+                  bold: true,
+                }),
+              ],
+              spacing: { before: 400, after: 100 },
+            }),
+            ...((tor.documentRequestSheets && Array.isArray(tor.documentRequestSheets) && tor.documentRequestSheets.length > 0)
+              ? [generateDrsTable(tor.documentRequestSheets)]
+              : [new Paragraph({ text: "-", spacing: { after: 200 } })]),
+
+            // 4. Performance Guarantee Requirement Sheet (PGRS)
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: "4. Performance Guarantee Requirement Sheet (PGRS)",
+                  font: "Arial",
+                  size: 20,
+                  bold: true,
+                }),
+              ],
+              spacing: { before: 400, after: 100 },
+            }),
+            ...((tor.performanceGuarantees && Array.isArray(tor.performanceGuarantees) && tor.performanceGuarantees.length > 0)
+              ? [generatePgrsTable(tor.performanceGuarantees)]
+              : [new Paragraph({ text: "-", spacing: { after: 200 } })]),
           ],
         },
       ],

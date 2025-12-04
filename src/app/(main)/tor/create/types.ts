@@ -11,6 +11,48 @@ export interface FieldDirectorProposal {
   name: string; // Nama jabatan Direksi Lapangan
 }
 
+// Approval Signature for Tab 5
+export interface ApprovalSignature {
+  id: string;
+  role: string;  // "Dibuat oleh", "Diperiksa oleh", "Disetujui oleh"
+  name: string;
+  position: string;
+  date: string;
+}
+
+// Tab 6 Interfaces
+export interface TechnicalParticular {
+  id: string;
+  specification: string;
+  ownerRequest: string;
+  vendorProposed: string;
+}
+
+export interface InspectionTestingPlan {
+  id: string;
+  testingItem: string;
+  testingMethod: string;
+  standardTestReference: string;
+  testedBy: string;
+  witnessBy: string;
+  acceptanceCriteria: string;
+}
+
+export interface DocumentRequestSheet {
+  id: string;
+  documentRequirement: string;
+  documentType: string;
+}
+
+export interface PerformanceGuarantee {
+  id: string;
+  plantItem: string;
+  performanceParameter: string;
+  baselineParameter: string;
+  verificationMethod: string;
+  remedialMeasure: string;
+}
+
 export interface TorFormData {
   id?: number;
   number?: string;
@@ -67,15 +109,18 @@ export interface TorFormData {
   pph?: number;
   grandTotal?: number;
   
+  // Tab 5: Lembar Pengesahan
+  approvalSignatures?: ApprovalSignature[];
+  
   // Legacy fields (deprecated - for backward compatibility)
   directorProposal?: string;
   fieldDirectorProposal?: string;
   
   // Tab 6: Lampiran
-  tpgData?: any;
-  itpData?: any;
-  drsData?: any;
-  pgrsData?: any;
+  technicalParticulars?: TechnicalParticular[];
+  inspectionTestingPlans?: InspectionTestingPlan[];
+  documentRequestSheets?: DocumentRequestSheet[];
+  performanceGuarantees?: PerformanceGuarantee[];
   
   // Budget Items
   budgetItems?: BudgetItem[];

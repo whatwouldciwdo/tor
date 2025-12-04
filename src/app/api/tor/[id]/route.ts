@@ -157,7 +157,9 @@ export async function PUT(req: NextRequest, context: RouteContext) {
       deliveryMechanism,
       // Tab 4: Usulan
       directorProposal,
+      directorProposals,
       fieldDirectorProposal,
+      fieldDirectorProposals,
       vendorRequirements,
       procurementMethod,
       paymentTerms,
@@ -167,11 +169,13 @@ export async function PUT(req: NextRequest, context: RouteContext) {
       ppn,
       pph,
       grandTotal,
+      // Tab 5: Lembar Pengesahan
+      approvalSignatures,
       // Tab 6: Lampiran
-      tpgData,
-      itpData,
-      drsData,
-      pgrsData,
+      technicalParticulars,
+      inspectionTestingPlans,
+      documentRequestSheets,
+      performanceGuarantees,
       // Budget items
       budgetItems,
     } = body;
@@ -217,7 +221,9 @@ export async function PUT(req: NextRequest, context: RouteContext) {
         deliveryMechanism,
         // Tab 4
         directorProposal,
+        directorProposals,
         fieldDirectorProposal,
+        fieldDirectorProposals,
         vendorRequirements,
         procurementMethod,
         paymentTerms,
@@ -227,11 +233,13 @@ export async function PUT(req: NextRequest, context: RouteContext) {
         ppn,
         pph,
         grandTotal,
+        // Tab 5
+        approvalSignatures,
         // Tab 6
-        tpgData,
-        itpData,
-        drsData,
-        pgrsData,
+        technicalParticulars,
+        inspectionTestingPlans,
+        documentRequestSheets,
+        performanceGuarantees,
         // Budget items - delete old and create new
         budgetItems: budgetItems
           ? {

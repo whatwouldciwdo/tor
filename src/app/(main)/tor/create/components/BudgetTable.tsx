@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { TorFormData, BudgetItem } from "../types";
+import Decimal from "decimal.js";
 
 interface BudgetTableProps {
   formData: TorFormData;
@@ -11,6 +12,22 @@ interface BudgetTableProps {
 
 export default function BudgetTable({ formData, onChange, isEditing = true }: BudgetTableProps) {
   const budgetItems = formData.budgetItems || [];
+
+  // ✅ FIX: Calculate totals using useMemo for display only
+  const calculatedTotals = useMemo(() => {
+    const subtotalDecimal = budgetItems.reduce((sum, item) => {
+      return sum.plus(new Decimal(item.totalPrice || 0));
+    }, new Decimal(0));
+    
+    const ppnDecimal = subtotalDecimal.times(0.11).toDecimalPlaces(2);
+    const grandTotalDecimal = subtotalDecimal.plus(ppnDecimal).toDecimalPlaces(2);
+
+    return {
+      subtotal: subtotalDecimal.toNumber(),
+      ppn: ppnDecimal.toNumber(),
+      grandTotal: grandTotalDecimal.toNumber(),
+    };
+  }, [budgetItems.map(item => item.totalPrice).join(',')]);
 
   const addRow = () => {
     if (!isEditing) return;
@@ -42,26 +59,44 @@ export default function BudgetTable({ formData, onChange, isEditing = true }: Bu
     const updated = [...budgetItems];
     updated[index] = { ...updated[index], [field]: value };
 
-    // Auto-calculate totalPrice
+    // Auto-calculate totalPrice using Decimal.js for precision
     if (field === "quantity" || field === "unitPrice") {
       const qty = field === "quantity" ? parseFloat(value) || 0 : updated[index].quantity;
       const price = field === "unitPrice" ? parseFloat(value) || 0 : updated[index].unitPrice;
-      updated[index].totalPrice = qty * price;
+      
+      // ✅ FIX: Use Decimal.js for precise calculation
+      const qtyDecimal = new Decimal(qty);
+      const priceDecimal = new Decimal(price);
+      const totalDecimal = qtyDecimal.times(priceDecimal);
+      
+      updated[index].totalPrice = totalDecimal.toNumber();
     }
 
+    // Update budget items first
     onChange({ budgetItems: updated });
+    
+    // Then recalculate and save totals
     recalculateTotals(updated);
   };
 
+  // ✅ FIX: Use Decimal.js for all calculations
   const recalculateTotals = (items: BudgetItem[]) => {
-    const subtotal = items.reduce((sum, item) => sum + (item.totalPrice || 0), 0);
-    const ppn = subtotal * 0.11; // PPN 11%
-    const grandTotal = subtotal + ppn;
+    // Calculate subtotal with Decimal precision
+    const subtotalDecimal = items.reduce((sum, item) => {
+      return sum.plus(new Decimal(item.totalPrice || 0));
+    }, new Decimal(0));
+    
+    // Calculate PPN (11%)
+    const ppnDecimal = subtotalDecimal.times(0.11).toDecimalPlaces(2);
+    
+    // Calculate grand total
+    const grandTotalDecimal = subtotalDecimal.plus(ppnDecimal).toDecimalPlaces(2);
 
+    // Save calculated totals to formData
     onChange({
-      subtotal,
-      ppn,
-      grandTotal,
+      subtotal: subtotalDecimal.toNumber(),
+      ppn: ppnDecimal.toNumber(),
+      grandTotal: grandTotalDecimal.toNumber(),
     });
   };
 
@@ -70,6 +105,7 @@ export default function BudgetTable({ formData, onChange, isEditing = true }: Bu
       style: "currency",
       currency: "IDR",
       minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
     }).format(value);
   };
 
@@ -118,6 +154,7 @@ export default function BudgetTable({ formData, onChange, isEditing = true }: Bu
                 <td className="px-3 py-2">
                   <input
                     type="number"
+                    step="0.01"
                     value={item.quantity}
                     onChange={(e) => updateRow(index, "quantity", e.target.value)}
                     disabled={!isEditing}
@@ -137,6 +174,7 @@ export default function BudgetTable({ formData, onChange, isEditing = true }: Bu
                 <td className="px-3 py-2">
                   <input
                     type="number"
+                    step="0.01"
                     value={item.unitPrice}
                     onChange={(e) => updateRow(index, "unitPrice", e.target.value)}
                     disabled={!isEditing}
@@ -181,27 +219,27 @@ export default function BudgetTable({ formData, onChange, isEditing = true }: Bu
         </button>
       )}
 
-      {/* Summary */}
+      {/* Summary with precise formatting */}
       <div className="border border-gray-300 rounded-lg p-4 bg-gray-50">
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
             <span className="text-gray-700">Subtotal:</span>
-            <span className="font-medium">{formatCurrency(formData.subtotal || 0)}</span>
+            <span className="font-medium">{formatCurrency(calculatedTotals.subtotal)}</span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-gray-700">PPN 11%:</span>
-            <span className="font-medium">{formatCurrency(formData.ppn || 0)}</span>
+            <span className="font-medium">{formatCurrency(calculatedTotals.ppn)}</span>
           </div>
           <div className="flex justify-between text-lg font-bold border-t pt-2">
             <span>Grand Total:</span>
-            <span className="text-blue-600">{formatCurrency(formData.grandTotal || 0)}</span>
+            <span className="text-blue-600">{formatCurrency(calculatedTotals.grandTotal)}</span>
           </div>
         </div>
       </div>
       
       {/* Note */}
       <div className="text-xs text-gray-600 italic">
-        <span>Rencana anggaran sebesar {formatCurrency(formData.grandTotal || 0)} termasuk PPN 11%.</span>
+        <span>Rencana anggaran sebesar {formatCurrency(calculatedTotals.grandTotal)} termasuk PPN 11%.</span>
       </div>
     </div>
   );

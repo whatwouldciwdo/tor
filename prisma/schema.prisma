@@ -214,11 +214,14 @@ model Tor {
   pph                   Decimal?         @db.Decimal(15, 2)
   grandTotal            Decimal?         @db.Decimal(15, 2)
 
+  // === TAB 5: LEMBAR PENGESAHAN ===
+  approvalSignatures    Json?            // Array of ApprovalSignature {id, role, name, position, date}
+
   // === TAB 6: LAMPIRAN ===
-  tpgData               Json?            // Technical Particular & Guarantee
-  itpData               Json?            // Inspection Testing Plan
-  drsData               Json?            // Document Request Sheet
-  pgrsData              Json?            // Performance Guarantee
+  technicalParticulars    Json?            // Technical Particular & Guarantee (TPG)
+  inspectionTestingPlans  Json?            // Inspection Testing Plan (ITP)
+  documentRequestSheets   Json?            // Document Request Sheet (DRS)
+  performanceGuarantees   Json?            // Performance Guarantee Requirement Sheet (PGRS)
 
   // Relations
   budgetItems           TorBudgetItem[]

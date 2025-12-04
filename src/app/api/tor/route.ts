@@ -93,9 +93,16 @@ export async function POST(req: NextRequest) {
       generalProvisions,
       deliveryPoint,
       deliveryMechanism,
+      workStages,
+      workStagesExplanation,
+      deliveryRequirements,
+      handoverPoint,
+      handoverMechanism,
       // Tab 4: Usulan
-      directorProposal,
-      fieldDirectorProposal,
+      directorProposal, // ⚠️ OLD FIELD (deprecated)
+      fieldDirectorProposal, // ⚠️ OLD FIELD (deprecated)
+      directorProposals, // ✅ NEW FIELD (Json array)
+      fieldDirectorProposals, // ✅ NEW FIELD (Json array)
       vendorRequirements,
       procurementMethod,
       paymentTerms,
@@ -106,10 +113,10 @@ export async function POST(req: NextRequest) {
       pph,
       grandTotal,
       // Tab 6: Lampiran
-      tpgData,
-      itpData,
-      drsData,
-      pgrsData,
+      technicalParticulars,
+      inspectionTestingPlans,
+      documentRequestSheets,
+      performanceGuarantees,
       // Budget items
       budgetItems,
     } = body;
@@ -163,9 +170,16 @@ export async function POST(req: NextRequest) {
         generalProvisions,
         deliveryPoint,
         deliveryMechanism,
+        workStagesData: workStages || null,
+        workStagesExplanation,
+        deliveryRequirements,
+        handoverPoint,
+        handoverMechanism,
         // Tab 4
-        directorProposal,
-        fieldDirectorProposal,
+        directorProposal, // Keep for backward compatibility
+        fieldDirectorProposal, // Keep for backward compatibility
+        directorProposals: directorProposals || null, // ✅ NEW: Save Json array
+        fieldDirectorProposals: fieldDirectorProposals || null, // ✅ NEW: Save Json array
         vendorRequirements,
         procurementMethod,
         paymentTerms,
@@ -176,10 +190,10 @@ export async function POST(req: NextRequest) {
         pph,
         grandTotal,
         // Tab 6
-        tpgData,
-        itpData,
-        drsData,
-        pgrsData,
+        technicalParticulars,
+        inspectionTestingPlans,
+        documentRequestSheets,
+        performanceGuarantees,
         // Budget items
         budgetItems: budgetItems
           ? {
@@ -212,6 +226,8 @@ export async function POST(req: NextRequest) {
     console.log("   - ID:", tor.id);
     console.log("   - Number:", tor.number);
     console.log("   - coverImage:", tor.coverImage);
+    console.log("   - directorProposals:", tor.directorProposals);
+    console.log("   - fieldDirectorProposals:", tor.fieldDirectorProposals);
 
     return NextResponse.json(tor, { status: 201 });
   } catch (error: any) {
