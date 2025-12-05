@@ -106,6 +106,7 @@ export interface TorFormData {
   otherRequirements?: string; // TiptapEditor HTML
   subtotal?: number;
   ppn?: number;
+  ppnRate?: number; // PPN percentage (e.g., 11 for 11%)
   pph?: number;
   grandTotal?: number;
   

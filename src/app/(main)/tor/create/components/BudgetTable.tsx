@@ -12,6 +12,7 @@ interface BudgetTableProps {
 
 export default function BudgetTable({ formData, onChange, isEditing = true }: BudgetTableProps) {
   const budgetItems = formData.budgetItems || [];
+  const ppnRate = formData.ppnRate ?? 11; // Default to 11% if not set
 
   // ✅ FIX: Calculate totals using useMemo for display only
   const calculatedTotals = useMemo(() => {
@@ -19,7 +20,7 @@ export default function BudgetTable({ formData, onChange, isEditing = true }: Bu
       return sum.plus(new Decimal(item.totalPrice || 0));
     }, new Decimal(0));
     
-    const ppnDecimal = subtotalDecimal.times(0.11).toDecimalPlaces(2);
+    const ppnDecimal = subtotalDecimal.times(ppnRate / 100).toDecimalPlaces(2);
     const grandTotalDecimal = subtotalDecimal.plus(ppnDecimal).toDecimalPlaces(2);
 
     return {
@@ -27,7 +28,7 @@ export default function BudgetTable({ formData, onChange, isEditing = true }: Bu
       ppn: ppnDecimal.toNumber(),
       grandTotal: grandTotalDecimal.toNumber(),
     };
-  }, [budgetItems.map(item => item.totalPrice).join(',')]);
+  }, [budgetItems.map(item => item.totalPrice).join(','), ppnRate]);
 
   const addRow = () => {
     if (!isEditing) return;
@@ -86,8 +87,9 @@ export default function BudgetTable({ formData, onChange, isEditing = true }: Bu
       return sum.plus(new Decimal(item.totalPrice || 0));
     }, new Decimal(0));
     
-    // Calculate PPN (11%)
-    const ppnDecimal = subtotalDecimal.times(0.11).toDecimalPlaces(2);
+    // Calculate PPN using current rate
+    const currentPpnRate = formData.ppnRate ?? 11;
+    const ppnDecimal = subtotalDecimal.times(currentPpnRate / 100).toDecimalPlaces(2);
     
     // Calculate grand total
     const grandTotalDecimal = subtotalDecimal.plus(ppnDecimal).toDecimalPlaces(2);
@@ -224,14 +226,33 @@ export default function BudgetTable({ formData, onChange, isEditing = true }: Bu
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
             <span className="text-gray-700">Subtotal:</span>
-            <span className="font-medium">{formatCurrency(calculatedTotals.subtotal)}</span>
+            <span className="font-medium text-gray-900">{formatCurrency(calculatedTotals.subtotal)}</span>
           </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-700">PPN 11%:</span>
-            <span className="font-medium">{formatCurrency(calculatedTotals.ppn)}</span>
+          <div className="flex justify-between items-center text-sm">
+            <div className="flex items-center gap-2">
+              <span className="text-gray-700">PPN:</span>
+              {isEditing ? (
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.1"
+                  value={ppnRate}
+                  onChange={(e) => {
+                    const newRate = parseFloat(e.target.value) || 0;
+                    onChange({ ppnRate: newRate });
+                  }}
+                  className="w-16 px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 text-gray-900 text-center"
+                />
+              ) : (
+                <span className="text-gray-700 font-medium">{ppnRate}%</span>
+              )}
+              {isEditing && <span className="text-gray-500 text-xs">%</span>}
+            </div>
+            <span className="font-medium text-gray-900">{formatCurrency(calculatedTotals.ppn)}</span>
           </div>
           <div className="flex justify-between text-lg font-bold border-t pt-2">
-            <span>Grand Total:</span>
+            <span className="text-gray-900">Grand Total:</span>
             <span className="text-blue-600">{formatCurrency(calculatedTotals.grandTotal)}</span>
           </div>
         </div>
@@ -239,7 +260,7 @@ export default function BudgetTable({ formData, onChange, isEditing = true }: Bu
       
       {/* Note */}
       <div className="text-xs text-gray-600 italic">
-        <span>Rencana anggaran sebesar {formatCurrency(calculatedTotals.grandTotal)} termasuk PPN 11%.</span>
+        <span>Rencana anggaran sebesar {formatCurrency(calculatedTotals.grandTotal)} termasuk PPN {ppnRate}%.</span>
       </div>
     </div>
   );

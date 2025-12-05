@@ -48,76 +48,116 @@ export default function Tab5LembarPengesahan({
     }
   };
 
-  // Initialize approval signatures if empty
+  // Initialize approval signatures if empty OR when workflow loads
   useEffect(() => {
-    if (!formData.approvalSignatures || formData.approvalSignatures.length === 0) {
-      // Auto-populate default signatures
-      const defaultSignatures: ApprovalSignature[] = [];
-      
-      // 1. Dibuat oleh (creator)
-      defaultSignatures.push({
-        id: uuidv4(),
-        role: "Dibuat oleh",
-        name: creatorName || "",
-        position: creatorPosition || "",
-        date: formData.creationDate || new Date().toISOString().split("T")[0],
-      });
+    // Auto-populate when:
+    // 1. No signatures exist yet, OR
+    // 2. Workflow just loaded and we have workflow steps
+    const shouldAutoPopulate = 
+      (!formData.approvalSignatures || formData.approvalSignatures.length === 0) ||
+      (workflowSteps.length > 0 && formData.approvalSignatures && 
+       formData.approvalSignatures.some(sig => sig.role !== "Dibuat oleh" && !sig.name));
+    
+    if (shouldAutoPopulate && workflowSteps.length > 0) {
+      populateSignaturesFromWorkflow();
+    }
+  }, [workflowSteps, creatorName, creatorPosition]);
 
-      // 2-3. Diperiksa/Disetujui oleh from workflow
-      if (workflowSteps.length > 0) {
-        // First step: Diperiksa oleh
-        if (workflowSteps[0]) {
-          defaultSignatures.push({
-            id: uuidv4(),
-            role: "Diperiksa oleh",
-            name: workflowSteps[0].user?.name || "", // Auto-fill from user
-            position: workflowSteps[0].position?.name || workflowSteps[0].label || "",
-            date: "",
-          });
+  const populateSignaturesFromWorkflow = () => {
+    const defaultSignatures: ApprovalSignature[] = [];
+    
+    // 1. Dibuat oleh (creator) - always first
+    defaultSignatures.push({
+      id: uuidv4(),
+      role: "Dibuat oleh",
+      name: creatorName || "",
+      position: creatorPosition || "",
+      date: formData.creationDate || new Date().toISOString().split("T")[0],
+    });
+
+    // 2. Filter and process workflow steps
+    if (workflowSteps.length > 0) {
+      // Filter out procurement approval (APPROVAL_4_1) and any steps >= 5
+      // Also filter by position/label containing "PENGADAAN"
+      const approvalSteps = workflowSteps.filter(step => {
+        // Exclude by status stage
+        if (step.statusStage === 'APPROVAL_4_1') return false;
+        
+        // Exclude by step number
+        if (step.stepNumber >= 5) return false;
+        
+        // Exclude if position or label contains "PENGADAAN" (case insensitive)
+        const positionName = (step.position?.name || '').toUpperCase();
+        const labelName = (step.label || '').toUpperCase();
+        if (positionName.includes('PENGADAAN') || labelName.includes('PENGADAAN')) {
+          return false;
         }
         
-        // Second step: Disetujui oleh  
-        if (workflowSteps[1]) {
-          defaultSignatures.push({
-            id: uuidv4(),
-            role: "Disetujui oleh",
-            name: workflowSteps[1].user?.name || "", // Auto-fill from user
-            position: workflowSteps[1].position?.name || workflowSteps[1].label || "",
-            date: "",
-          });
-        }
+        return true;
+      });
 
-        // Additional steps
-        for (let i = 2; i < workflowSteps.length; i++) {
-          defaultSignatures.push({
-            id: uuidv4(),
-            role: "Disetujui oleh",
-            name: workflowSteps[i].user?.name || "", // Auto-fill from user
-            position: workflowSteps[i].position?.name || workflowSteps[i].label || "",
-            date: "",
-          });
+      // Create signatures for each approval step
+      approvalSteps.forEach((step) => {
+        // Determine role based on position and statusStage
+        let role = 'Diperiksa oleh'; // Default
+        
+        // Check if this is Manager Enjiniring (always "Disetujui oleh")
+        const positionName = (step.position?.name || '').toUpperCase();
+        const labelName = (step.label || '').toUpperCase();
+        
+        if (positionName.includes('MANAGER ENJINIRING') || 
+            positionName.includes('MANAGER ENGINEERING') ||
+            labelName.includes('MANAGER ENJINIRING') ||
+            labelName.includes('MANAGER ENGINEERING')) {
+          role = 'Disetujui oleh';
+        } else if (step.statusStage === 'APPROVAL_4') {
+          // Also "Disetujui oleh" for final approval step
+          role = 'Disetujui oleh';
         }
-      } else {
-        // Fallback if no workflow
+        
+        // Get user name from workflow data
+        const userName = step.user?.name || step.position?.users?.[0]?.name || "";
+        const positionNameDisplay = step.position?.name || step.label || "";
+
         defaultSignatures.push({
           id: uuidv4(),
-          role: "Diperiksa oleh",
-          name: "",
-          position: "",
+          role: role,
+          name: userName,
+          position: positionNameDisplay,
           date: "",
         });
-        defaultSignatures.push({
-          id: uuidv4(),
-          role: "Disetujui oleh",
-          name: "",
-          position: "",
-          date: "",
-        });
-      }
-
-      onChange({ approvalSignatures: defaultSignatures });
+      });
+    } else {
+      // Fallback if no workflow - create generic entries
+      defaultSignatures.push({
+        id: uuidv4(),
+        role: "Diperiksa oleh",
+        name: "",
+        position: "",
+        date: "",
+      });
+      defaultSignatures.push({
+        id: uuidv4(),
+        role: "Disetujui oleh",
+        name: "",
+        position: "",
+        date: "",
+      });
     }
-  }, [workflowSteps, creatorName, creatorPosition, formData.creationDate]);
+
+    onChange({ approvalSignatures: defaultSignatures });
+  };
+
+  const handleRefreshFromWorkflow = () => {
+    if (workflowSteps.length === 0) {
+      alert("Data workflow belum tersedia. Pastikan bidang sudah dipilih.");
+      return;
+    }
+    
+    if (confirm("Refresh data penandatangan dari workflow? Data yang sudah diisi akan diganti.")) {
+      populateSignaturesFromWorkflow();
+    }
+  };
 
   const signatures = formData.approvalSignatures || [];
 
@@ -174,14 +214,17 @@ export default function Tab5LembarPengesahan({
                 </div>
                 <div className="flex-1">
                   <div className="font-medium text-gray-900">{step.label}</div>
-                  <div className="text-sm text-gray-500">{step.position?.name || "-"}</div>
+                  <div className="text-sm text-gray-600">{step.position?.name || "-"}</div>
+                  {step.user?.name && (
+                    <div className="text-sm text-gray-500">({step.user.name})</div>
+                  )}
                 </div>
                 <div className="text-sm text-gray-400">Pending</div>
               </div>
             ))}
           </div>
           <p className="mt-4 text-xs text-gray-500 italic">
-            * Alur approval aktual akan disesuaikan dengan workflow bidang yang dipilih
+            * Alur approval lengkap bidang (Lembar Pengesahan tidak termasuk approval pengadaan)
           </p>
         </div>
       )}
@@ -190,16 +233,31 @@ export default function Tab5LembarPengesahan({
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-medium text-gray-900">Penandatangan</h3>
-          {isEditing && (
-            <button
-              type="button"
-              onClick={addSignature}
-              className="flex items-center gap-1 px-3 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition"
-            >
-              <Plus size={14} />
-              Tambah Penandatangan
-            </button>
-          )}
+          <div className="flex gap-2">
+            {workflowSteps.length > 0 && (
+              <button
+                type="button"
+                onClick={handleRefreshFromWorkflow}
+                className="flex items-center gap-1 px-3 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600 transition"
+                title="Refresh dari workflow"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+                </svg>
+                Refresh dari Workflow
+              </button>
+            )}
+            {isEditing && (
+              <button
+                type="button"
+                onClick={addSignature}
+                className="flex items-center gap-1 px-3 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition"
+              >
+                <Plus size={14} />
+                Tambah Penandatangan
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="space-y-4">
