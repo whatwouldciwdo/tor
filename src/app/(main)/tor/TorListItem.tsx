@@ -3,20 +3,23 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Send } from "lucide-react";
+import { Send, User, Calendar, TrendingUp } from "lucide-react";
+import ApprovalProgressBar from "./components/ApprovalProgressBar";
+import TorStatusBadge from "./components/TorStatusBadge";
 
 type TorListItemProps = {
-  tor: any; // Using any for simplicity as per existing pattern, or define strict type if preferred
+  tor: any;
   isCreator: boolean;
   view: "mine" | "approve";
+  workflowSteps?: any[];
 };
 
-export default function TorListItem({ tor, isCreator, view }: TorListItemProps) {
+export default function TorListItem({ tor, isCreator, view, workflowSteps = [] }: TorListItemProps) {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.MouseEvent) => {
-    e.preventDefault(); // Prevent Link navigation
+    e.preventDefault();
     e.stopPropagation();
 
     if (!confirm("Submit this ToR for approval?")) return;
@@ -44,47 +47,89 @@ export default function TorListItem({ tor, isCreator, view }: TorListItemProps) 
   return (
     <Link
       href={`/tor/${tor.id}`}
-      className="block p-4 bg-[#333] rounded-lg hover:bg-[#3a3a3a] group relative"
+      className="block bg-[#1f1f1f] border border-[#333] rounded-xl hover:border-[#42ff6b] hover:shadow-lg hover:shadow-[#42ff6b]/10 transition-all duration-200 overflow-hidden group"
     >
-      <div className="flex justify-between items-start">
-        <div className="flex-1">
-          <div className="text-lg font-medium">
-            {tor.title || "Tanpa Judul"}
-          </div>
-
-          {/* Info utama */}
-          {view === "mine" ? (
-            <div className="text-sm text-gray-300">
-              {tor.bidang?.name ?? "-"} — {tor.statusStage}
-            </div>
-          ) : (
-            <div className="text-sm text-gray-300 space-y-0.5">
-              <div>
-                Bidang: {tor.bidang?.name ?? "-"} — Status: {tor.statusStage}
-              </div>
-              <div>
-                Step: {tor.currentStepNumber} | Pengusul:{" "}
-                {tor.creator?.name ?? "-"}
+      <div className="p-5">
+        {/* Header */}
+        <div className="flex justify-between items-start mb-3">
+          <div className="flex-1">
+            <div className="flex items-start gap-3">
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-white group-hover:text-[#42ff6b] transition-colors line-clamp-1">
+                  {tor.title || "Tanpa Judul"}
+                </h3>
+                <p className="text-sm text-gray-400 mt-1 line-clamp-2">
+                  {tor.description || "No description"}
+                </p>
               </div>
             </div>
-          )}
-
-          <div className="text-xs text-gray-400 mt-1">
-            {new Date(tor.createdAt).toLocaleString("id-ID")}
           </div>
+
+          {/* Status Badge */}
+          <TorStatusBadge 
+            status={tor.statusStage} 
+            isFinalApproved={tor.isFinalApproved}
+            className="ml-3 flex-shrink-0"
+          />
         </div>
 
-        {/* Submit Button for Drafts */}
+        {/* Metadata */}
+        <div className="flex flex-wrap gap-4 text-xs text-gray-400 mb-4">
+          <div className="flex items-center gap-1.5">
+            <TrendingUp size={14} className="text-[#42ff6b]" />
+            <span>{tor.bidang?.name || "-"}</span>
+          </div>
+          
+          {view === "approve" && (
+            <div className="flex items-center gap-1.5">
+              <User size={14} className="text-[#42ff6b]" />
+              <span>{tor.creator?.name || "-"}</span>
+            </div>
+          )}
+          
+          <div className="flex items-center gap-1.5">
+            <Calendar size={14} className="text-[#42ff6b]" />
+            <span>{new Date(tor.createdAt).toLocaleDateString("id-ID")}</span>
+          </div>
+
+          {tor.budgetAmount && (
+            <div className="flex items-center gap-1.5 font-medium text-[#42ff6b]">
+              <span>💰</span>
+              <span>
+                {new Intl.NumberFormat("id-ID", {
+                  style: "currency",
+                  currency: tor.budgetCurrency || "IDR",
+                  minimumFractionDigits: 0,
+                }).format(tor.budgetAmount)}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Progress Bar - only show if not DRAFT */}
+        {tor.statusStage !== "DRAFT" && workflowSteps.length > 0 && (
+          <div className="mt-4 pt-4 border-t border-[#333]">
+            <ApprovalProgressBar
+              workflowSteps={workflowSteps}
+              currentStepNumber={tor.currentStepNumber || 0}
+              isFinalApproved={tor.isFinalApproved || false}
+              variant="compact"
+            />
+          </div>
+        )}
+
+        {/* Action Buttons */}
         {view === "mine" && isCreator && tor.statusStage === "DRAFT" && (
-          <button
-            onClick={handleSubmit}
-            disabled={submitting}
-            className="ml-4 px-3 py-1.5 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 transition-colors z-10"
-            title="Submit for Approval"
-          >
-            <Send size={14} />
-            {submitting ? "..." : "Submit"}
-          </button>
+          <div className="mt-4 pt-4 border-t border-[#333]">
+            <button
+              onClick={handleSubmit}
+              disabled={submitting}
+              className="w-full sm:w-auto px-4 py-2 bg-[#42ff6b] text-black text-sm font-medium rounded-lg hover:bg-[#38e05c] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors shadow-lg shadow-[#42ff6b]/20"
+            >
+              <Send size={16} />
+              {submitting ? "Submitting..." : "Submit for Approval"}
+            </button>
+          </div>
         )}
       </div>
     </Link>

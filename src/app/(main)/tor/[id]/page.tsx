@@ -1,17 +1,29 @@
 // src/app/(main)/tor/[id]/page.tsx
+
+import Link from "next/link";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
-import TorDetailClient from "./TorDetailClient";
+import { cleanPrisma } from "@/lib/prisma-clean";
+import { Home, Edit, CheckCircle, RotateCcw, XCircle } from "lucide-react";
+import ApprovalProgressBar from "../components/ApprovalProgressBar";
+import TorStatusBadge from "../components/TorStatusBadge";
+import ApprovalHistoryTimeline from "../components/ApprovalHistoryTimeline";
+import TorFormLayout from "../create/TorFormLayout";
 
 type PageProps = {
   params: Promise<{ id: string }>;
+  searchParams?: Promise<{ mode?: string }>;
 };
 
-export default async function TorDetailPage({ params }: PageProps) {
+export default async function TorDetailPage({ params, searchParams }: PageProps) {
   const { id } = await params;
+  const search = await searchParams;
+  const mode = search?.mode || "view"; // 'view' or 'edit'
+
   const sessionUser = await getCurrentUser();
 
-  const [tor, dbUser] = await Promise.all([
+  const [torRaw, dbUser] = await Promise.all([
     prisma.tor.findUnique({
       where: { id: parseInt(id) },
       include: {
@@ -20,16 +32,22 @@ export default async function TorDetailPage({ params }: PageProps) {
             workflows: {
               include: {
                 steps: {
-                  orderBy: { stepNumber: "asc" }
-                }
-              }
-            }
-          }
+                  orderBy: { stepNumber: "asc" },
+                  include: {
+                    position: true,
+                  },
+                },
+              },
+            },
+          },
         },
         creator: {
           include: {
             position: true,
           },
+        },
+        budgetItems: {
+          orderBy: { orderIndex: "asc" },
         },
         history: {
           include: {
@@ -49,115 +67,256 @@ export default async function TorDetailPage({ params }: PageProps) {
     }),
   ]);
 
-  if (!tor) {
+  if (!torRaw) {
     return (
       <div className="min-h-screen bg-[#262626] text-white flex items-center justify-center">
-        <div>TOR tidak ditemukan.</div>
+        <div className="text-center">
+          <div className="text-6xl mb-4">📄</div>
+          <h2 className="text-2xl font-bold mb-2">TOR Not Found</h2>
+          <p className="text-gray-400 mb-6">The TOR you're looking for doesn't exist.</p>
+          <Link
+            href="/tor"
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#42ff6b] text-black rounded-lg hover:bg-[#38e05c] font-medium"
+          >
+            <Home size={20} />
+            Back to Dashboard
+          </Link>
+        </div>
       </div>
     );
   }
 
-  const canSubmit =
-    tor.creatorUserId === sessionUser.id && tor.statusStage === "DRAFT";
+  // ⭐ Convert Prisma object → plain safe JSON for client components
+  const tor = cleanPrisma(torRaw);
 
+  // Get workflow data
   const workflow = tor.bidang?.workflows?.[0];
-  const currentStep = workflow?.steps?.find(
-    (step) => step.stepNumber === tor.currentStepNumber
+  const workflowSteps = workflow?.steps?.map((step: any) => ({
+    stepNumber: step.stepNumber,
+    label: step.label,
+    statusStage: step.statusStage,
+    positionId: step.positionId,
+    positionName: step.position?.name,
+  })) || [];
+
+  const currentStep = workflowSteps.find(
+    (step: any) => step.stepNumber === tor.currentStepNumber
   );
+
+  // Permission calculations
+  const isCreator = tor.creatorUserId === sessionUser.id;
+  const canEdit = isCreator && (tor.statusStage === "DRAFT" || tor.statusStage === "REVISE");
+  const canSubmit = isCreator && tor.statusStage === "DRAFT";
 
   const canApprove =
     tor.statusStage !== "DRAFT" &&
     !tor.isFinalApproved &&
     !!dbUser &&
+    !isCreator &&
     (dbUser.isSuperAdmin ||
       (currentStep && dbUser.positionId === currentStep.positionId));
 
+  // If in edit mode but can't edit, redirect to view mode
+  if (mode === "edit" && !canEdit) {
+    redirect(`/tor/${id}`);
+  }
+
+  const isViewOnly = mode !== "edit" || !canEdit;
+
+  // Format TOR data for TorFormLayout
+  const torFormData = {
+    ...tor,
+    number: tor.number || undefined,
+    creationDate: tor.creationDate || "",
+    projectStartDate: tor.projectStartDate || "",
+    projectEndDate: tor.projectEndDate || "",
+    workStages: tor.workStagesData,
+    directorProposals: tor.directorProposals || [],
+    fieldDirectorProposals: tor.fieldDirectorProposals || [],
+    statusStage: tor.statusStage,
+  };
+
   return (
-    <div className="min-h-screen bg-[#262626] text-white px-6 py-10">
-      <div className="max-w-4xl mx-auto space-y-6">
-        <div className="flex justify-between items-center">
-          <h1 className="text-xl font-semibold">Detail TOR</h1>
-
-          <Link
-            href="/tor"
-            className="px-3 py-1.5 rounded-lg bg-[#333] text-sm hover:bg-[#404040]"
-          >
-            &larr; Kembali ke daftar
-          </Link>
-        </div>
-
-        <div className="space-y-2 bg-[#333] rounded-lg p-4">
-          <div className="text-lg font-semibold">
-            {tor.title || "Tanpa Judul"}
-          </div>
-          <div className="text-sm text-gray-300">
-            Nomor: {tor.number || "-"}
-          </div>
-          <div className="text-sm text-gray-300">
-            Bidang: {tor.bidang?.name ?? "-"}
-          </div>
-          <div className="text-sm text-gray-300">
-            Dibuat oleh: {tor.creator?.name ?? "-"} ({tor.creator?.position?.name ?? "-"})
-          </div>
-          <div className="text-sm text-gray-300">
-            Status: <span className="font-medium">{tor.statusStage}</span>
-          </div>
-          <div className="text-sm text-gray-300">
-            Step saat ini: {tor.currentStepNumber}
-            {currentStep && ` - ${currentStep.label}`}
-          </div>
-          {tor.isFinalApproved && (
-            <div className="text-sm text-green-400 font-semibold">
-              ✅ TOR sudah disetujui lengkap
+    <div className="min-h-screen bg-[#262626] text-white">
+      {/* Header Section */}
+      <div className="bg-[#1f1f1f] border-b border-[#333] shadow-lg">
+        <div className="max-w-7xl mx-auto px-6 py-6">
+          {/* Navigation */}
+          <div className="flex items-center gap-4 mb-6">
+            <Link
+              href="/tor"
+              className="p-2 rounded-lg bg-[#2a2a2a] border border-[#42ff6b]/30 hover:bg-[#333] hover:border-[#42ff6b] text-white transition-colors"
+              title="Back to Dashboard"
+            >
+              <Home size={20} />
+            </Link>
+            <div>
+              <h1 className="text-2xl font-bold">
+                {tor.title || "Untitled TOR"}
+              </h1>
+              <p className="text-sm text-gray-400 mt-1">
+                TOR #{tor.number || "DRAFT"} • {tor.bidang?.name}
+              </p>
             </div>
-          )}
-          <div className="text-xs text-gray-400">
-            Dibuat: {new Date(tor.createdAt).toLocaleString("id-ID")}
           </div>
-        </div>
 
-        {/* History approval */}
-        <div className="bg-[#333] rounded-lg p-4 space-y-3">
-          <div className="font-semibold text-sm">Riwayat Persetujuan</div>
-          {tor.history.length === 0 && (
-            <div className="text-xs text-gray-400">Belum ada riwayat.</div>
-          )}
-
-          <div className="space-y-2">
-            {tor.history.map((h) => (
-              <div
-                key={h.id}
-                className="text-xs border-b border-[#444] pb-2 last:border-0 last:pb-0"
-              >
-                <div className="flex justify-between">
-                  <span className="font-medium">{h.action}</span>
-                  <span className="text-gray-400">
-                    {new Date(h.createdAt).toLocaleString("id-ID")}
-                  </span>
-                </div>
-                <div className="text-gray-300">
-                  {h.fromStatusStage && `${h.fromStatusStage} → `}
-                  {h.toStatusStage}
-                </div>
-                <div className="text-gray-300">
-                  Oleh: {h.actedBy?.name ?? h.actedByNameSnapshot} ({h.actedByPositionSnapshot})
-                </div>
-                {h.note && (
-                  <div className="text-gray-400 italic">{h.note}</div>
-                )}
+          {/* Status & Progress */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Left: Metadata */}
+            <div className="lg:col-span-1 space-y-3">
+              <div>
+                <div className="text-xs text-gray-500 mb-1">Status</div>
+                <TorStatusBadge
+                  status={tor.statusStage}
+                  isFinalApproved={tor.isFinalApproved}
+                />
               </div>
-            ))}
+
+              <div>
+                <div className="text-xs text-gray-500 mb-1">Creator</div>
+                <div className="text-sm font-medium">
+                  {tor.creator?.name || "-"}
+                </div>
+                <div className="text-xs text-gray-400">
+                  {tor.creator?.position?.name || "-"}
+                </div>
+              </div>
+
+              <div>
+                <div className="text-xs text-gray-500 mb-1">Created</div>
+                <div className="text-sm">
+                  {new Date(tor.createdAt).toLocaleDateString("id-ID", {
+                    dateStyle: "long",
+                  })}
+                </div>
+              </div>
+
+              {tor.budgetAmount && (
+                <div>
+                  <div className="text-xs text-gray-500 mb-1">Budget</div>
+                  <div className="text-sm font-semibold text-[#42ff6b]">
+                    {new Intl.NumberFormat("id-ID", {
+                      style: "currency",
+                      currency: tor.budgetCurrency || "IDR",
+                      minimumFractionDigits: 0,
+                    }).format(tor.budgetAmount)}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Right: Progress Bar */}
+            <div className="lg:col-span-2">
+              {tor.statusStage !== "DRAFT" && workflowSteps.length > 0 && (
+                <ApprovalProgressBar
+                  workflowSteps={workflowSteps}
+                  currentStepNumber={tor.currentStepNumber || 0}
+                  isFinalApproved={tor.isFinalApproved || false}
+                  variant="detailed"
+                />
+              )}
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="mt-6 flex flex-wrap gap-3">
+            {canEdit && isViewOnly && (
+              <Link
+                href={`/tor/${id}?mode=edit`}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-[#42ff6b] text-black rounded-lg hover:bg-[#38e05c] font-medium transition-colors shadow-lg shadow-[#42ff6b]/20"
+              >
+                <Edit size={18} />
+                Edit TOR
+              </Link>
+            )}
+
+            {canApprove && (
+              <>
+                <ApproveButton torId={id} />
+                <ReviseButton torId={id} />
+                <RejectButton torId={id} />
+              </>
+            )}
           </div>
         </div>
+      </div>
 
-        {/* Action Buttons */}
-        <TorDetailClient
-          torId={tor.id.toString()}
-          status={tor.statusStage}
-          canSubmit={canSubmit}
-          canApprove={canApprove}
-        />
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        {mode === "edit" && canEdit ? (
+          // Edit Mode - Show TorFormLayout
+          <TorFormLayout
+            torId={parseInt(id)}
+            initialData={torFormData}
+            bidangId={tor.bidangId}
+            bidangName={tor.bidang?.name}
+            creatorName={tor.creator?.name}
+            creatorPosition={tor.creator?.position?.name}
+          />
+        ) : (
+          // View Mode - Show TorFormLayout in view-only mode
+          <div className="space-y-8">
+            <TorFormLayout
+              torId={parseInt(id)}
+              initialData={torFormData}
+              bidangId={tor.bidangId}
+              bidangName={tor.bidang?.name}
+              creatorName={tor.creator?.name}
+              creatorPosition={tor.creator?.position?.name}
+            />
+
+            {/* Approval History */}
+            {tor.history && tor.history.length > 0 && (
+              <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+                <ApprovalHistoryTimeline history={tor.history} />
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
+  );
+}
+
+// Client Components for Actions
+function ApproveButton({ torId }: { torId: string }) {
+  return (
+    <form action={`/api/tor/${torId}/approve`} method="POST">
+      <button
+        type="submit"
+        className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors"
+      >
+        <CheckCircle size={18} />
+        Approve
+      </button>
+    </form>
+  );
+}
+
+function ReviseButton({ torId }: { torId: string }) {
+  return (
+    <form action={`/api/tor/${torId}/revise`} method="POST">
+      <button
+        type="submit"
+        className="inline-flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-medium transition-colors"
+      >
+        <RotateCcw size={18} />
+        Request Revision
+      </button>
+    </form>
+  );
+}
+
+function RejectButton({ torId }: { torId: string }) {
+  return (
+    <form action={`/api/tor/${torId}/reject`} method="POST">
+      <button
+        type="submit"
+        className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium transition-colors"
+      >
+        <XCircle size={18} />
+        Reject
+      </button>
+    </form>
   );
 }
