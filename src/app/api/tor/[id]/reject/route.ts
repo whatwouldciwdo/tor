@@ -58,25 +58,14 @@ export async function POST(req: NextRequest, context: RouteContext) {
       );
     }
 
-    // 5. Update TOR to REJECTED
-    // Note: TorStatusStage enum does not have REJECTED in the schema I saw earlier?
-    // Let me check schema.prisma content I read earlier.
-    // enum TorActionType { SUBMIT, APPROVE, REVISE, REJECT, EXPORT }
-    // enum TorStatusStage { DRAFT, APPROVAL_1, ... REVISE }
-    // There is NO "REJECTED" status in TorStatusStage!
-    // So "Reject" might just mean "Revise" effectively, or I need to add REJECTED to enum?
-    // Or maybe it goes back to DRAFT?
-    // For now, I will treat REJECT as REVISE but with action "REJECT".
-    // OR, I should check if I can add REJECTED to schema.
-    // The user said "jangan rubah apapun dulu" (don't change anything yet) regarding schema/seed?
-    // Wait, the user said "jangan rubah apapun dulu" in the context of "analisa approval".
-    // But if the schema doesn't support REJECTED, I can't set it.
-    // I will set it to REVISE for now, but with action REJECT.
-    
+    // 5. Update TOR - set to REVISE status and reset step number
+    // Note: Schema doesn't have REJECTED status, so we use REVISE with REJECT action in history.
+    // Reset currentStepNumber to 0 so creator can re-submit through full approval workflow.
     const updatedTor = await prisma.tor.update({
       where: { id: torId },
       data: {
-        statusStage: "REVISE", // Fallback since REJECTED enum is missing
+        statusStage: "REVISE",
+        currentStepNumber: 0, // Reset to 0 so progress bar resets
       },
     });
 

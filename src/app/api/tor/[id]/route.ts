@@ -107,14 +107,15 @@ export async function PUT(req: NextRequest, context: RouteContext) {
       return NextResponse.json({ message: "ToR not found" }, { status: 404 });
     }
 
-    // Only creator can edit, and only if status is DRAFT
+    // Only creator can edit, and only if status is DRAFT or REVISE
     if (existingTor.creatorUserId !== user.id && !user.isSuperAdmin) {
       return NextResponse.json({ message: "Forbidden" }, { status: 403 });
     }
 
-    if (existingTor.statusStage !== "DRAFT" && !user.isSuperAdmin) {
+    // Allow editing only in DRAFT or REVISE status
+    if (existingTor.statusStage !== "DRAFT" && existingTor.statusStage !== "REVISE" && !user.isSuperAdmin) {
       return NextResponse.json(
-        { message: "Can only edit ToR in DRAFT status" },
+        { message: "Can only edit ToR in DRAFT or REVISE status" },
         { status: 400 }
       );
     }

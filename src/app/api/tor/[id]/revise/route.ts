@@ -58,17 +58,14 @@ export async function POST(req: NextRequest, context: RouteContext) {
       );
     }
 
-    // 5. Update TOR to REVISE
-    // Usually revision goes back to DRAFT or a specific REVISE state where Creator can edit.
-    // For simplicity, let's set statusStage to REVISE.
+    // 5. Update TOR to REVISE and reset step number
+    // When revision is requested, reset currentStepNumber to 0 so the progress bar resets.
+    // Creator can then edit and re-submit to start the approval workflow again.
     const updatedTor = await prisma.tor.update({
       where: { id: torId },
       data: {
         statusStage: "REVISE",
-        // Optional: Reset step number or keep it to know where it was revised from?
-        // Usually we keep currentStepNumber or reset to 0. Let's reset to 0 (Draft-like) or keep it?
-        // If we set to REVISE, the creator needs to be able to edit.
-        // Let's assume REVISE state allows editing.
+        currentStepNumber: 0, // Reset to 0 so progress bar resets
       },
     });
 

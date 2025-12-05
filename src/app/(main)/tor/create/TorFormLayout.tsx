@@ -116,6 +116,19 @@ export default function TorFormLayout({
     }
   }, []);
 
+  // Helper function to convert ISO date string to YYYY-MM-DD
+  const formatDateForInput = (dateString: string | null | undefined): string => {
+    if (!dateString) return "";
+    try {
+      // Handle both ISO strings and already formatted dates
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return "";
+      return date.toISOString().split("T")[0];
+    } catch {
+      return "";
+    }
+  };
+
   const handleChange = (data: Partial<TorFormData>) => {
     setFormData((prev) => ({ ...prev, ...data }));
   };
@@ -139,14 +152,14 @@ export default function TorFormLayout({
         title: freshData.title || "",
         description: freshData.description || "",
         bidangId: freshData.bidangId,
-        creationDate: freshData.creationDate || "",
+        creationDate: formatDateForInput(freshData.creationDate),
         creationYear: freshData.creationYear || new Date().getFullYear(),
         budgetType: freshData.budgetType || "",
         workType: freshData.workType || "",
         program: freshData.program || "",
         rkaYear: freshData.rkaYear,
-        projectStartDate: freshData.projectStartDate || "",
-        projectEndDate: freshData.projectEndDate || "",
+        projectStartDate: formatDateForInput(freshData.projectStartDate),
+        projectEndDate: formatDateForInput(freshData.projectEndDate),
         executionYear: freshData.executionYear,
         materialJasaValue: freshData.materialJasaValue,
         budgetCurrency: freshData.budgetCurrency || "IDR",
@@ -231,14 +244,14 @@ export default function TorFormLayout({
         title: savedTor.title || "",
         description: savedTor.description || "",
         bidangId: savedTor.bidangId,
-        creationDate: savedTor.creationDate || "",
+        creationDate: formatDateForInput(savedTor.creationDate),
         creationYear: savedTor.creationYear || new Date().getFullYear(),
         budgetType: savedTor.budgetType || "",
         workType: savedTor.workType || "",
         program: savedTor.program || "",
         rkaYear: savedTor.rkaYear,
-        projectStartDate: savedTor.projectStartDate || "",
-        projectEndDate: savedTor.projectEndDate || "",
+        projectStartDate: formatDateForInput(savedTor.projectStartDate),
+        projectEndDate: formatDateForInput(savedTor.projectEndDate),
         executionYear: savedTor.executionYear,
         materialJasaValue: savedTor.materialJasaValue,
         budgetCurrency: savedTor.budgetCurrency || "IDR",

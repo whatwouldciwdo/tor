@@ -5,21 +5,19 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { cleanPrisma } from "@/lib/prisma-clean";
-import { Home, Edit, CheckCircle, RotateCcw, XCircle } from "lucide-react";
+import { Home, Edit } from "lucide-react";
 import ApprovalProgressBar from "../components/ApprovalProgressBar";
 import TorStatusBadge from "../components/TorStatusBadge";
 import ApprovalHistoryTimeline from "../components/ApprovalHistoryTimeline";
 import TorFormLayout from "../create/TorFormLayout";
+import TorDetailClient from "./TorDetailClient";
 
 type PageProps = {
   params: Promise<{ id: string }>;
-  searchParams?: Promise<{ mode?: string }>;
 };
 
-export default async function TorDetailPage({ params, searchParams }: PageProps) {
+export default async function TorDetailPage({ params }: PageProps) {
   const { id } = await params;
-  const search = await searchParams;
-  const mode = search?.mode || "view"; // 'view' or 'edit'
 
   const sessionUser = await getCurrentUser();
 
@@ -115,13 +113,6 @@ export default async function TorDetailPage({ params, searchParams }: PageProps)
     !isCreator &&
     (dbUser.isSuperAdmin ||
       (currentStep && dbUser.positionId === currentStep.positionId));
-
-  // If in edit mode but can't edit, redirect to view mode
-  if (mode === "edit" && !canEdit) {
-    redirect(`/tor/${id}`);
-  }
-
-  const isViewOnly = mode !== "edit" || !canEdit;
 
   // Format TOR data for TorFormLayout
   const torFormData = {
@@ -219,10 +210,10 @@ export default async function TorDetailPage({ params, searchParams }: PageProps)
           </div>
 
           {/* Action Buttons */}
-          <div className="mt-6 flex flex-wrap gap-3">
-            {canEdit && isViewOnly && (
+          <div className="mt-6 flex flex-wrap gap-3 items-start">
+            {canEdit && (
               <Link
-                href={`/tor/${id}?mode=edit`}
+                href={`/tor/edit/${id}`}
                 className="inline-flex items-center gap-2 px-4 py-2 bg-[#42ff6b] text-black rounded-lg hover:bg-[#38e05c] font-medium transition-colors shadow-lg shadow-[#42ff6b]/20"
               >
                 <Edit size={18} />
@@ -230,21 +221,20 @@ export default async function TorDetailPage({ params, searchParams }: PageProps)
               </Link>
             )}
 
-            {canApprove && (
-              <>
-                <ApproveButton torId={id} />
-                <ReviseButton torId={id} />
-                <RejectButton torId={id} />
-              </>
-            )}
+            {/* TorDetailClient handles submit, approve, revise, reject buttons */}
+            <TorDetailClient
+              torId={id}
+              status={tor.statusStage}
+              canSubmit={canSubmit}
+              canApprove={canApprove}
+            />
           </div>
         </div>
       </div>
 
-      {/* Main Content */}
+      {/* Main Content - Always View Only */}
       <div className="max-w-7xl mx-auto px-6 py-8">
-        {mode === "edit" && canEdit ? (
-          // Edit Mode - Show TorFormLayout
+        <div className="space-y-8">
           <TorFormLayout
             torId={parseInt(id)}
             initialData={torFormData}
@@ -252,73 +242,17 @@ export default async function TorDetailPage({ params, searchParams }: PageProps)
             bidangName={tor.bidang?.name}
             creatorName={tor.creator?.name}
             creatorPosition={tor.creator?.position?.name}
-            isViewOnly={false}
+            isViewOnly={true}
           />
-        ) : (
-          // View Mode - Show TorFormLayout in view-only mode
-          <div className="space-y-8">
-            <TorFormLayout
-              torId={parseInt(id)}
-              initialData={torFormData}
-              bidangId={tor.bidangId}
-              bidangName={tor.bidang?.name}
-              creatorName={tor.creator?.name}
-              creatorPosition={tor.creator?.position?.name}
-              isViewOnly={true}
-            />
 
-            {/* Approval History */}
-            {tor.history && tor.history.length > 0 && (
-              <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
-                <ApprovalHistoryTimeline history={tor.history} />
-              </div>
-            )}
-          </div>
-        )}
+          {/* Approval History */}
+          {tor.history && tor.history.length > 0 && (
+            <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+              <ApprovalHistoryTimeline history={tor.history} />
+            </div>
+          )}
+        </div>
       </div>
     </div>
-  );
-}
-
-// Client Components for Actions
-function ApproveButton({ torId }: { torId: string }) {
-  return (
-    <form action={`/api/tor/${torId}/approve`} method="POST">
-      <button
-        type="submit"
-        className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors"
-      >
-        <CheckCircle size={18} />
-        Approve
-      </button>
-    </form>
-  );
-}
-
-function ReviseButton({ torId }: { torId: string }) {
-  return (
-    <form action={`/api/tor/${torId}/revise`} method="POST">
-      <button
-        type="submit"
-        className="inline-flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-medium transition-colors"
-      >
-        <RotateCcw size={18} />
-        Request Revision
-      </button>
-    </form>
-  );
-}
-
-function RejectButton({ torId }: { torId: string }) {
-  return (
-    <form action={`/api/tor/${torId}/reject`} method="POST">
-      <button
-        type="submit"
-        className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium transition-colors"
-      >
-        <XCircle size={18} />
-        Reject
-      </button>
-    </form>
   );
 }

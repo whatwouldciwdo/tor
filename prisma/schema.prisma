@@ -39,6 +39,7 @@ model Bidang {
   positions Position[]
   workflows Workflow[]
   tors      Tor[]
+  positionAccess PositionBidangAccess[]
 
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
@@ -58,9 +59,27 @@ model Position {
   users         User[]
   positionRoles PositionRole[]
   workflowSteps WorkflowStep[]
+  bidangAccess  PositionBidangAccess[]
 
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
+}
+
+// 2.1 PositionBidangAccess (Cross-Bidang Approval Access)
+model PositionBidangAccess {
+  id         Int      @id @default(autoincrement())
+  positionId Int
+  bidangId   Int
+  
+  position   Position @relation(fields: [positionId], references: [id], onDelete: Cascade)
+  bidang     Bidang   @relation(fields: [bidangId], references: [id], onDelete: Cascade)
+  
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  @@unique([positionId, bidangId])
+  @@index([positionId])
+  @@index([bidangId])
 }
 
 // 3. Users (Pegawai / Akun)

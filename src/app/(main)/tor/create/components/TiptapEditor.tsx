@@ -331,11 +331,8 @@ const MenuBar = ({ editor }: any) => {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  if (!editor) {
-    return null;
-  }
-
   // Close dropdown when clicking outside
+  // IMPORTANT: useEffect must be called BEFORE any conditional return
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -351,6 +348,11 @@ const MenuBar = ({ editor }: any) => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [showListStyleDropdown]);
+
+  // Early return AFTER all hooks have been called
+  if (!editor) {
+    return null;
+  }
 
   // ✅ NEW: Upload image and convert to base64
   const addImage = useCallback(() => {

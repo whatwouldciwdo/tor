@@ -29,6 +29,7 @@ export default async function TorListPage({ searchParams }: PageProps) {
       position: {
         select: {
           name: true,
+          bidangId: true,
           bidang: {
             select: {
               name: true,
@@ -84,7 +85,24 @@ export default async function TorListPage({ searchParams }: PageProps) {
     if (!isSuperAdmin && !dbUser?.positionId) {
       torList = [];
     } else {
+      // Get accessible bidang IDs for this position (cross-bidang access)
+      const accessibleBidangs = await prisma.positionBidangAccess.findMany({
+        where: { positionId: dbUser!.positionId! },
+        select: { bidangId: true },
+      });
+
+      // Determine which bidangs this user can approve
+      const bidangIds: number[] = accessibleBidangs.length > 0
+        ? accessibleBidangs.map(a => a.bidangId)
+        : dbUser.position?.bidangId
+          ? [dbUser.position.bidangId]
+          : [];
+
+      // Get workflows for ALL accessible bidangs
       const workflows = await prisma.workflow.findMany({
+        where: bidangIds.length > 0
+          ? { bidangId: { in: bidangIds } }
+          : {},
         include: {
           steps: {
             where: isSuperAdmin
