@@ -25,13 +25,23 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* Ensure input text is visible */
-input, textarea, select {
-  color: #111827 !important; /* gray-900 */
+/* Ensure input text is visible - but allow override with inline styles */
+input:not([style*="color"]),
+textarea:not([style*="color"]),
+select:not([style*="color"]) {
+  color: #111827; /* gray-900 - only if no inline style */
 }
 
 input:disabled, textarea:disabled, select:disabled {
   color: #6b7280 !important; /* gray-500 */
+}
+
+/* Login page specific - force white text and override autofill */
+input[type="email"]:-webkit-autofill,
+input[type="password"]:-webkit-autofill {
+  -webkit-text-fill-color: white !important;
+  -webkit-box-shadow: 0 0 0px 1000px transparent inset !important;
+  transition: background-color 5000s ease-in-out 0s;
 }
 
 /* ============================================

@@ -10,7 +10,7 @@ import Tab3TahapanPekerjaan from "./Tab3TahapanPekerjaan";
 import Tab4Usulan from "./Tab4Usulan";
 import Tab5LembarPengesahan from "./Tab5LembarPengesahan";
 import Tab6Lampiran from "./Tab6Lampiran";
-import { Edit, X, Home } from "lucide-react";
+import { Edit, X } from "lucide-react";
 
 interface TorFormLayoutProps {
   torId?: number;
@@ -19,6 +19,7 @@ interface TorFormLayoutProps {
   bidangName?: string;
   creatorName?: string;
   creatorPosition?: string;
+  isViewOnly?: boolean;
 }
 
 export default function TorFormLayout({
@@ -28,6 +29,7 @@ export default function TorFormLayout({
   bidangName,
   creatorName,
   creatorPosition,
+  isViewOnly = false,
 }: TorFormLayoutProps) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabId>("informasi-umum");
@@ -195,6 +197,12 @@ export default function TorFormLayout({
   }, [torId]);
 
   const handleSave = useCallback(async (isAutoSave = false) => {
+    // Don't save in view-only mode
+    if (isViewOnly) {
+      console.log('⚠️ Save skipped: view-only mode');
+      return;
+    }
+    
     if (!isAutoSave) setIsSaving(true);
 
     try {
@@ -422,13 +430,6 @@ export default function TorFormLayout({
 
         {/* Header */}
         <div className="flex items-center gap-4">
-          <button
-            onClick={() => router.push("/tor")}
-            className="p-2 rounded-lg bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 transition-colors"
-            title="Kembali ke Dashboard"
-          >
-            <Home size={20} />
-          </button>
           <h1 className="text-3xl font-semibold text-gray-900">
             {torId ? "Edit TOR" : "Create New TOR"}
           </h1>

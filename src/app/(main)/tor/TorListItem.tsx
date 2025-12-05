@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Send, User, Calendar, TrendingUp } from "lucide-react";
+import { Send, User, Calendar, TrendingUp, DollarSign } from "lucide-react";
 import ApprovalProgressBar from "./components/ApprovalProgressBar";
 import TorStatusBadge from "./components/TorStatusBadge";
 
@@ -94,7 +94,7 @@ export default function TorListItem({ tor, isCreator, view, workflowSteps = [] }
 
           {tor.budgetAmount && (
             <div className="flex items-center gap-1.5 font-medium text-[#42ff6b]">
-              <span>💰</span>
+              <DollarSign size={14} />
               <span>
                 {new Intl.NumberFormat("id-ID", {
                   style: "currency",

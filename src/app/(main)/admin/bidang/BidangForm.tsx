@@ -74,6 +74,8 @@ export default function BidangForm({ mode, initialData }: BidangFormProps) {
           <input
             type="text"
             className="w-full rounded-md border border-[#42ff6b]/60 bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#42ff6b] focus:border-transparent"
+            style={{ color: 'white' }}
+            required
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Contoh: Bidang Outage"
@@ -85,6 +87,7 @@ export default function BidangForm({ mode, initialData }: BidangFormProps) {
           <input
             type="text"
             className="w-full rounded-md border border-[#42ff6b]/60 bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#42ff6b] focus:border-transparent"
+            style={{ color: 'white' }}
             value={code}
             onChange={(e) => setCode(e.target.value.toUpperCase())}
             placeholder="Contoh: OUTAGE"

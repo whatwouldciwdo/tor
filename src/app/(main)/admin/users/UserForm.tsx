@@ -104,6 +104,7 @@ export default function UserForm({ mode, positions, initialData }: UserFormProps
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Nama lengkap"
+            style={{ color: 'white' }}
           />
         </div>
 
@@ -115,6 +116,7 @@ export default function UserForm({ mode, positions, initialData }: UserFormProps
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="email@perusahaan.co.id"
+            style={{ color: 'white' }}
           />
         </div>
       </div>
@@ -130,6 +132,7 @@ export default function UserForm({ mode, positions, initialData }: UserFormProps
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder={isEdit ? "•••••••" : "Minimal 6 karakter"}
+            style={{ color: 'white' }}
           />
         </div>
 
@@ -141,6 +144,7 @@ export default function UserForm({ mode, positions, initialData }: UserFormProps
             onChange={(e) =>
               setPositionId(e.target.value ? Number(e.target.value) : "")
             }
+            style={{ color: 'white' }}
           >
             <option value="" disabled>
               Pilih jabatan

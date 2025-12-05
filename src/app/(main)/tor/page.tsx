@@ -5,7 +5,7 @@ import TorListItem from "./TorListItem";
 import { cleanPrisma } from "@/lib/prisma-clean";
 import DashboardStats from "./components/DashboardStats";
 import Sidebar from "../components/Sidebar";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, FileText, CheckCircle } from "lucide-react";
 
 type PageProps = {
   searchParams?: Promise<{
@@ -240,24 +240,26 @@ export default async function TorListPage({ searchParams }: PageProps) {
           <div className="bg-[#1f1f1f] rounded-lg border border-[#333] p-1.5 inline-flex gap-1">
             <Link
               href="/tor"
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${
                 view === "mine"
                   ? "bg-[#42ff6b] text-black shadow-sm"
                   : "text-gray-300 hover:bg-[#2a2a2a]"
               }`}
             >
-              📝 My TORs
+              <FileText size={16} />
+              My TORs
             </Link>
 
             <Link
               href="/tor?view=approve"
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${
                 view === "approve"
                   ? "bg-[#42ff6b] text-black shadow-sm"
                   : "text-gray-300 hover:bg-[#2a2a2a]"
               }`}
             >
-              ✅ Pending Approvals
+              <CheckCircle size={16} />
+              Pending Approvals
             </Link>
           </div>
 

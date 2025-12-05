@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import TorFormLayout from "./TorFormLayout";
 import { TorFormData } from "./types";
+import Sidebar from "../../components/Sidebar";
 
 export const dynamic = "force-dynamic";
 
@@ -30,15 +31,15 @@ export default async function CreateTorPage({ searchParams }: PageProps) {
 
   if (!dbUser || !dbUser.position) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <p className="text-gray-600">User position not found. Please contact administrator.</p>
+      <div className="min-h-screen flex items-center justify-center bg-[#262626] text-white">
+        <p>User position not found. Please contact administrator.</p>
       </div>
     );
   }
 
   const bidangId = dbUser.position.bidangId ?? undefined;
   const bidangName = dbUser.position.bidang?.name || "Unknown";
-  const creatorName = dbUser.name;
+  const creatorName =dbUser.name;
 
   // If editing existing ToR
   if (params?.id) {
@@ -65,6 +66,13 @@ export default async function CreateTorPage({ searchParams }: PageProps) {
     // Check access
     if (tor.creatorUserId !== user.id && !dbUser.isSuperAdmin) {
       redirect("/tor");
+    }
+
+    // Check if can edit
+    const canEdit = tor.statusStage === "DRAFT" || tor.statusStage === "REVISE";
+    if (!canEdit && !dbUser.isSuperAdmin) {
+      // Redirect to view mode
+      redirect(`/tor/${torId}`);
     }
 
     // Convert to form data format
@@ -106,24 +114,42 @@ export default async function CreateTorPage({ searchParams }: PageProps) {
     } as any as TorFormData;
 
     return (
-      <TorFormLayout
-        torId={torId}
-        initialData={initialData}
-        bidangId={bidangId}
-        bidangName={bidangName}
-        creatorName={tor.creator?.name || creatorName}
-        creatorPosition={tor.creator?.position?.name || dbUser.position.name}
-      />
+      <div className="min-h-screen flex bg-[#262626]">
+        <Sidebar
+          userName={dbUser.name}
+          isSuperAdmin={dbUser.isSuperAdmin || false}
+          canCreate={true}
+        />
+        <div className="flex-1">
+          <TorFormLayout
+            torId={torId}
+            initialData={initialData}
+            bidangId={bidangId}
+            bidangName={bidangName}
+            creatorName={tor.creator?.name || creatorName}
+            creatorPosition={tor.creator?.position?.name || dbUser.position.name}
+          />
+        </div>
+      </div>
     );
   }
 
   // Creating new ToR
   return (
-    <TorFormLayout
-      bidangId={bidangId}
-      bidangName={bidangName}
-      creatorName={creatorName}
-      creatorPosition={dbUser.position.name}
-    />
+    <div className="min-h-screen flex bg-[#262626]">
+      <Sidebar
+        userName={dbUser.name}
+        isSuperAdmin={dbUser.isSuperAdmin || false}
+        canCreate={true}
+      />
+      <div className="flex-1">
+        <TorFormLayout
+          bidangId={bidangId}
+          bidangName={bidangName}
+          creatorName={creatorName}
+          creatorPosition={dbUser.position.name}
+        />
+      </div>
+    </div>
   );
 }

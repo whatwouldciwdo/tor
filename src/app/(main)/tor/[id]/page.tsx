@@ -252,6 +252,7 @@ export default async function TorDetailPage({ params, searchParams }: PageProps)
             bidangName={tor.bidang?.name}
             creatorName={tor.creator?.name}
             creatorPosition={tor.creator?.position?.name}
+            isViewOnly={false}
           />
         ) : (
           // View Mode - Show TorFormLayout in view-only mode
@@ -263,6 +264,7 @@ export default async function TorDetailPage({ params, searchParams }: PageProps)
               bidangName={tor.bidang?.name}
               creatorName={tor.creator?.name}
               creatorPosition={tor.creator?.position?.name}
+              isViewOnly={true}
             />
 
             {/* Approval History */}

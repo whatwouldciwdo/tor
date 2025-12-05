@@ -86,22 +86,22 @@ export default function Sidebar({ userName, isSuperAdmin, canCreate = true }: Si
               <button
                 key={item.id}
                 onClick={item.onClick}
-                className={`flex flex-col items-center gap-2 text-xs transition-all ${
+                className={`flex flex-col items-center gap-2 text-xs transition-all duration-300 group ${
                   item.active
                     ? "text-[#42ff6b]"
-                    : "text-white hover:text-[#42ff6b]"
+                    : "text-white hover:text-[#42ff6b] hover:-translate-y-1"
                 }`}
               >
                 <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
+                  className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${
                     item.active
-                      ? "border-2 border-[#42ff6b] bg-[#42ff6b]/10"
-                      : "border-2 border-[#42ff6b]"
+                      ? "border-2 border-[#42ff6b] bg-[#42ff6b]/10 shadow-lg shadow-[#42ff6b]/50"
+                      : "border-2 border-[#42ff6b] group-hover:bg-[#42ff6b]/20 group-hover:shadow-lg group-hover:shadow-[#42ff6b]/50 group-hover:scale-110"
                   }`}
                 >
                   <item.icon className="w-5 h-5" />
                 </div>
-                <span>{item.label}</span>
+                <span className="group-hover:font-semibold transition-all duration-300">{item.label}</span>
               </button>
             )
         )}
@@ -109,12 +109,12 @@ export default function Sidebar({ userName, isSuperAdmin, canCreate = true }: Si
         {/* Logout */}
         <button
           onClick={handleLogout}
-          className="flex flex-col items-center gap-2 text-xs text-white hover:text-[#42ff6b] transition-all"
+          className="flex flex-col items-center gap-2 text-xs text-white hover:text-red-400 hover:-translate-y-1 transition-all duration-300 group"
         >
-          <div className="w-10 h-10 rounded-full border-2 border-[#42ff6b] flex items-center justify-center">
+          <div className="w-10 h-10 rounded-full border-2 border-[#42ff6b] group-hover:border-red-400 group-hover:bg-red-500/20 group-hover:shadow-lg group-hover:shadow-red-400/50 group-hover:scale-110 flex items-center justify-center transition-all duration-300">
             <LogOut className="w-5 h-5" />
           </div>
-          <span>logout</span>
+          <span className="group-hover:font-semibold transition-all duration-300">logout</span>
         </button>
       </div>
 

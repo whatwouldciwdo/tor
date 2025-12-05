@@ -109,6 +109,8 @@ export default function PositionForm({
           <input
             type="text"
             className="w-full rounded-md border border-[#42ff6b]/60 bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#42ff6b] focus:border-transparent"
+            style={{ color: 'white' }}
+            required
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Contoh: Officer Outage"
@@ -120,6 +122,7 @@ export default function PositionForm({
           <input
             type="text"
             className="w-full rounded-md border border-[#42ff6b]/60 bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#42ff6b] focus:border-transparent"
+            style={{ color: 'white' }}
             value={code || ""}
             onChange={(e) => setCode(e.target.value.toUpperCase())}
             placeholder="Kode internal"
@@ -132,9 +135,11 @@ export default function PositionForm({
           <label className="text-xs text-gray-300">Bidang</label>
           <select
             className="w-full rounded-md border border-[#42ff6b]/60 bg-[#262626] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#42ff6b] focus:border-transparent"
-            value={isGlobal ? "" : bidangId}
+            style={{ color: 'white' }}
+            required
+            value={bidangId ?? ""}
             onChange={(e) =>
-              setBidangId(e.target.value ? Number(e.target.value) : "")
+              setBidangId(e.target.value ? Number(e.target.value) : null)
             }
             disabled={isGlobal}
           >
@@ -156,8 +161,11 @@ export default function PositionForm({
           <input
             type="number"
             className="w-full rounded-md border border-[#42ff6b]/60 bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#42ff6b] focus:border-transparent"
-            value={levelOrder}
-            onChange={(e) => setLevelOrder(e.target.value)}
+            style={{ color: 'white' }}
+            value={levelOrder ?? ""}
+            onChange={(e) =>
+              setLevelOrder(e.target.value ? Number(e.target.value) : null)
+            }
             placeholder="Urutan di tampilan (angka kecil = lebih bawah)"
           />
         </div>

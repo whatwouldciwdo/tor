@@ -75,6 +75,7 @@ export default function LoginPage() {
                 type="email"
                 placeholder="Enter your email"
                 className="w-full rounded-md border border-[#42ff6b] bg-transparent px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#42ff6b] focus:border-transparent placeholder:text-gray-400"
+                style={{ color: 'white' }}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 autoComplete="email"
@@ -85,6 +86,7 @@ export default function LoginPage() {
                 type="password"
                 placeholder="Enter your password"
                 className="w-full rounded-md border border-[#42ff6b] bg-transparent px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#42ff6b] focus:border-transparent placeholder:text-gray-400"
+                style={{ color: 'white' }}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete="current-password"
