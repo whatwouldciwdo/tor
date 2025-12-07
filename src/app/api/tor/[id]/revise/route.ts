@@ -84,6 +84,29 @@ export async function POST(req: NextRequest, context: RouteContext) {
       },
     });
 
+    // Send email notification to creator
+    try {
+      const { sendRevisionNotification } = await import("@/lib/email");
+      
+      const creator = await prisma.user.findUnique({
+        where: { id: tor.creatorUserId },
+      });
+
+      if (creator?.email) {
+        await sendRevisionNotification({
+          to: creator.email,
+          torNumber: tor.number || 'N/A',
+          torTitle: tor.title,
+          revisionNote: note,
+          revisorName: user.name,
+          editLink: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/tor/${tor.id}`,
+        });
+      }
+    } catch (emailError) {
+      console.error("Failed to send revision notification email:", emailError);
+      // Don't fail the revision if email fails
+    }
+
     return NextResponse.json({
       message: "ToR requested for revision",
       tor: updatedTor,

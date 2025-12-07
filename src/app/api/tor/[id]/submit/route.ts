@@ -33,6 +33,24 @@ async function getCurrentUser(req: NextRequest) {
   return user;
 }
 
+// Generate TOR number: {title-slug}-{ddmmyyyy}-{ms}
+function generateTorNumber(title: string, createdAt: Date): string {
+  const titleSlug = (title || "draft")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .substring(0, 30);
+
+  const day = String(createdAt.getDate()).padStart(2, "0");
+  const month = String(createdAt.getMonth() + 1).padStart(2, "0");
+  const year = createdAt.getFullYear();
+  const dateStr = `${day}${month}${year}`;
+  
+  const ms = String(createdAt.getTime()).slice(-6);
+
+  return `${titleSlug}-${dateStr}-${ms}`;
+}
+
 type RouteContext = {
   params: Promise<{ id: string }>;
 };
@@ -59,10 +77,10 @@ export async function POST(req: NextRequest, context: RouteContext) {
       return NextResponse.json({ message: "Forbidden" }, { status: 403 });
     }
 
-    // Can only submit if DRAFT
-    if (tor.statusStage !== "DRAFT") {
+    // Can only submit if DRAFT or REVISE
+    if (tor.statusStage !== "DRAFT" && tor.statusStage !== "REVISE") {
       return NextResponse.json(
-        { message: "ToR is not in DRAFT status" },
+        { message: "ToR is not in DRAFT or REVISE status" },
         { status: 400 }
       );
     }
@@ -94,10 +112,15 @@ export async function POST(req: NextRequest, context: RouteContext) {
 
     const firstStep = workflow.steps[0];
 
-    // Update ToR to first approval step
+    // ✅ Generate final TOR number from title (if still draft number)
+    const now = new Date();
+    const finalTorNumber = generateTorNumber(tor.title || "untitled", tor.createdAt || now);
+
+    // Update ToR to first approval step with final number
     const updatedTor = await prisma.tor.update({
       where: { id: parseInt(id) },
       data: {
+        number: finalTorNumber, // ✅ Update to final number
         statusStage: firstStep.statusStage,
         currentStepNumber: firstStep.stepNumber,
       },
@@ -117,14 +140,40 @@ export async function POST(req: NextRequest, context: RouteContext) {
         torId: updatedTor.id,
         stepNumber: 0,
         action: "SUBMIT",
-        fromStatusStage: "DRAFT",
+        fromStatusStage: tor.statusStage, // Use actual current status (DRAFT or REVISE)
         toStatusStage: firstStep.statusStage,
         actedByUserId: user.id,
         actedByNameSnapshot: user.name,
         actedByPositionSnapshot: user.position?.name || "Unknown",
-        note: "ToR submitted for approval",
+        note: tor.statusStage === "REVISE" ? "ToR re-submitted after revision" : "ToR submitted for approval",
       },
     });
+
+    // Send email notification to first approver
+    try {
+      const { sendSubmitNotification } = await import("@/lib/email");
+      
+      // Get first approver
+      const firstApprover = await prisma.user.findFirst({
+        where: { 
+          positionId: firstStep.positionId, 
+          isActive: true 
+        },
+      });
+
+      if (firstApprover?.email) {
+        await sendSubmitNotification({
+          to: firstApprover.email,
+          torNumber: updatedTor.number || 'N/A',
+          torTitle: updatedTor.title,
+          creatorName: user.name,
+          approvalLink: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/tor/${updatedTor.id}`,
+        });
+      }
+    } catch (emailError) {
+      console.error("Failed to send submit notification email:", emailError);
+      // Don't fail the submission if email fails
+    }
 
     return NextResponse.json({
       message: "ToR submitted successfully",

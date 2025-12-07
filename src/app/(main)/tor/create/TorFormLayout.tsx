@@ -11,6 +11,8 @@ import Tab4Usulan from "./Tab4Usulan";
 import Tab5LembarPengesahan from "./Tab5LembarPengesahan";
 import Tab6Lampiran from "./Tab6Lampiran";
 import { Edit, X } from "lucide-react";
+import { AlertModal, ConfirmModal } from "@/components/Modal";
+import { useAlertModal, useConfirmModal } from "@/hooks/useModal";
 
 interface TorFormLayoutProps {
   torId?: number;
@@ -20,6 +22,7 @@ interface TorFormLayoutProps {
   creatorName?: string;
   creatorPosition?: string;
   isViewOnly?: boolean;
+  hasExportRole?: boolean;
 }
 
 export default function TorFormLayout({
@@ -30,12 +33,14 @@ export default function TorFormLayout({
   creatorName,
   creatorPosition,
   isViewOnly = false,
+  hasExportRole = false,
 }: TorFormLayoutProps) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabId>("informasi-umum");
   const [formData, setFormData] = useState<TorFormData>({
     title: initialData?.title || "",
     description: initialData?.description || "",
+    number: initialData?.number,
     bidangId: bidangId || initialData?.bidangId,
     creationDate: initialData?.creationDate || "",
     creationYear: initialData?.creationYear || new Date().getFullYear(),
@@ -81,12 +86,19 @@ export default function TorFormLayout({
     inspectionTestingPlans: initialData?.inspectionTestingPlans || [],
     documentRequestSheets: initialData?.documentRequestSheets || [],
     performanceGuarantees: initialData?.performanceGuarantees || [],
+    statusStage: initialData?.statusStage,
   });
   
   const [isSaving, setIsSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [isReloading, setIsReloading] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [isChangingTab, setIsChangingTab] = useState(false);
+  
+  // Modal hooks
+  const alertModal = useAlertModal();
+  const confirmModal = useConfirmModal();
   
   // Per-tab editing state
   const [tabEditingState, setTabEditingState] = useState<Record<TabId, boolean>>({
@@ -152,6 +164,7 @@ export default function TorFormLayout({
       setFormData({
         title: freshData.title || "",
         description: freshData.description || "",
+        number: freshData.number,
         bidangId: freshData.bidangId,
         creationDate: formatDateForInput(freshData.creationDate),
         creationYear: freshData.creationYear || new Date().getFullYear(),
@@ -204,12 +217,15 @@ export default function TorFormLayout({
       
       console.log('✅ Data reloaded successfully');
     } catch (error: any) {
-      console.error('❌ Reload error:', error);
-      alert('Failed to reload data: ' + error.message);
+      console.error('Failed to reload data:', error);
+      alertModal.showAlert(
+        `Failed to reload data: ${error.message}`,
+        'error'
+      );
     } finally {
       setIsReloading(false);
     }
-  }, [torId]);
+  }, [torId, alertModal]);
 
   const handleSave = useCallback(async (isAutoSave = false) => {
     // Don't save in view-only mode
@@ -245,6 +261,7 @@ export default function TorFormLayout({
       setFormData({
         title: savedTor.title || "",
         description: savedTor.description || "",
+        number: savedTor.number,
         bidangId: savedTor.bidangId,
         creationDate: formatDateForInput(savedTor.creationDate),
         creationYear: savedTor.creationYear || new Date().getFullYear(),
@@ -292,12 +309,11 @@ export default function TorFormLayout({
         performanceGuarantees: savedTor.performanceGuarantees || [],
       });
 
-      if (!torId) {
-        router.push(`/tor/create?id=${savedTor.id}`);
-      }
-
+      setLastSaved(new Date());
+      console.log('✅ ToR saved successfully at:', new Date().toISOString());
+      
       if (!isAutoSave) {
-        alert("ToR saved successfully!");
+        alertModal.showAlert('ToR saved successfully!', 'success');
         if (activeTab !== "informasi-umum") {
           setTabEditingState(prev => ({ ...prev, [activeTab]: false }));
         }
@@ -307,12 +323,12 @@ export default function TorFormLayout({
     } catch (error: any) {
       console.error("❌ Save error:", error);
       if (!isAutoSave) {
-        alert(error.message || "Failed to save ToR");
+        alertModal.showAlert(error.message || "Failed to save ToR", 'error');
       }
     } finally {
       if (!isAutoSave) setIsSaving(false);
     }
-  }, [torId, formData, router, activeTab]);
+  }, [torId, formData, router, activeTab, alertModal]);
 
   // ✅ FIX: Debounced auto-save (saves 3 seconds after last change)
   useEffect(() => {
@@ -343,37 +359,42 @@ export default function TorFormLayout({
   }, [torId, formData, handleSave]);
 
   const handleSubmit = async () => {
+    // Validation
     if (!formData.title || !formData.background || !formData.objective) {
-      alert("Please fill in required fields: Title, Background, and Objective");
+      alertModal.showAlert(
+        'Please fill in required fields: Title, Background, and Objective',
+        'warning'
+      );
       return;
     }
+    
+    confirmModal.showConfirm(
+      'Submit this ToR for approval? You won\'t be able to edit it after submission.',
+      async () => {
+        setSubmitting(true);
+        try {
+          await handleSave();
 
-    if (!confirm("Submit this ToR for approval? You won't be able to edit it after submission.")) {
-      return;
-    }
+          const response = await fetch(`/api/tor/${torId}/submit`, {
+            method: "POST",
+          });
 
-    setSubmitting(true);
+          if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || "Failed to submit");
+          }
 
-    try {
-      await handleSave();
-
-      const response = await fetch(`/api/tor/${torId}/submit`, {
-        method: "POST",
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Failed to submit");
-      }
-
-      alert("ToR submitted successfully!");
-      router.push("/tor");
-    } catch (error: any) {
-      console.error("Submit error:", error);
-      alert(error.message || "Failed to submit ToR");
-    } finally {
-      setSubmitting(false);
-    }
+          alertModal.showAlert("ToR submitted successfully!", 'success');
+          router.push("/tor");
+        } catch (error: any) {
+          console.error("Submit error:", error);
+          alertModal.showAlert(error.message || "Failed to submit ToR", 'error');
+        } finally {
+          setSubmitting(false);
+        }
+      },
+      'warning'
+    );
   };
 
   const tabs = [
@@ -401,13 +422,22 @@ export default function TorFormLayout({
     if (!torId) return;
     
     if (tabEditingState[activeTab]) {
-      const confirmExport = confirm(
-        'You have unsaved changes in the current tab. The export will use the last saved version.\n\n' +
-        'Do you want to continue with export?'
+      confirmModal.showConfirm(
+        'You have unsaved changes in the current tab. The export will use the last saved version.\n\nDo you want to continue with export?',
+        async () => {
+          await performExport();
+        },
+        'warning'
       );
-      if (!confirmExport) return;
+      return;
     }
     
+    await performExport();
+  };
+  
+  const performExport = async () => {
+    
+    setIsExporting(true);
     try {
       console.log('📥 Starting export...');
       
@@ -435,7 +465,9 @@ export default function TorFormLayout({
       await reloadData();
     } catch (error) {
       console.error('❌ Export error:', error);
-      alert('Failed to export ToR');
+      alertModal.showAlert('Failed to export ToR', 'error');
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -475,20 +507,31 @@ export default function TorFormLayout({
               <div className="text-sm text-gray-600">
                 Nilai Anggaran: {formatCurrency(formData.budgetAmount || undefined, formData.budgetCurrency || undefined)}
               </div>
-              {/* Only show Export button when NOT in view-only mode */}
-              {!isViewOnly && (
+              {/* Only show Export button when user has EXPORT role */}
+              {!isViewOnly && hasExportRole && (
                 <button
                   type="button"
                   onClick={handleExport}
-                  disabled={!torId}
+                  disabled={!torId || isExporting}
                   className="mt-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 ml-auto"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                    <polyline points="7 10 12 15 17 10" />
-                    <line x1="12" y1="15" x2="12" y2="3" />
-                  </svg>
-                  Export Word
+                  {isExporting ? (
+                    <>
+                      <svg className="animate-spin" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                      </svg>
+                      Exporting...
+                    </>
+                  ) : (
+                    <>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="7 10 12 15 17 10" />
+                        <line x1="12" y1="15" x2="12" y2="3" />
+                      </svg>
+                      Export Word
+                    </>
+                  )}
                 </button>
               )}
             </div>
@@ -507,14 +550,29 @@ export default function TorFormLayout({
           {tabs.map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition ${
+              onClick={async () => {
+                if (isChangingTab) return;
+                setIsChangingTab(true);
+                // Small delay for better UX
+                await new Promise(resolve => setTimeout(resolve, 200));
+                setActiveTab(tab.id);
+                setIsChangingTab(false);
+              }}
+              disabled={isChangingTab}
+              className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition disabled:opacity-50 disabled:cursor-not-allowed ${
                 activeTab === tab.id
                   ? "bg-gray-900 text-white"
                   : "bg-blue-100 text-blue-700 hover:bg-blue-200"
               }`}
             >
-              {tab.label}
+              {isChangingTab ? (
+                <span className="inline-flex items-center gap-1">
+                  <span className="animate-spin">⟳</span>
+                  {tab.label}
+                </span>
+              ) : (
+                tab.label
+              )}
             </button>
           ))}
         </div>
@@ -527,10 +585,14 @@ export default function TorFormLayout({
                 onClick={async () => {
                   const isCurrentlyEditing = tabEditingState[activeTab];
                   if (isCurrentlyEditing) {
-                    if (confirm("Batalkan perubahan? Data yang belum disimpan akan hilang.")) {
-                      await reloadData();
-                      setTabEditingState(prev => ({ ...prev, [activeTab]: false }));
-                    }
+                    confirmModal.showConfirm(
+                      'Batalkan perubahan? Data yang belum disimpan akan hilang.',
+                      async () => {
+                        await reloadData();
+                        setTabEditingState(prev => ({ ...prev, [activeTab]: false }));
+                      },
+                      'warning'
+                    );
                   } else {
                     setTabEditingState(prev => ({ ...prev, [activeTab]: true }));
                   }
@@ -606,7 +668,7 @@ export default function TorFormLayout({
               </button>
             )}
 
-            {torId && formData.statusStage === "DRAFT" && (
+            {torId && (formData.statusStage === "DRAFT" || formData.statusStage === "REVISE") && (
               <button
                 onClick={handleSubmit}
                 disabled={submitting}
@@ -618,6 +680,21 @@ export default function TorFormLayout({
           </div>
         </div>
       </div>
+      
+      {/* Modals */}
+      <AlertModal
+        isOpen={alertModal.isOpen}
+        onClose={alertModal.close}
+        message={alertModal.alertMessage}
+        type={alertModal.alertType}
+      />
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={confirmModal.close}
+        onConfirm={confirmModal.confirmCallback || (() => {})}
+        message={confirmModal.confirmMessage}
+        type={confirmModal.confirmType}
+      />
     </div>
   );
 }

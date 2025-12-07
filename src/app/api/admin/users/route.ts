@@ -29,6 +29,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const {
       name,
+      username,
       email,
       password,
       positionId,
@@ -36,6 +37,7 @@ export async function POST(req: NextRequest) {
       isActive,
     } = body as {
       name?: string;
+      username?: string;
       email?: string;
       password?: string;
       positionId?: number;
@@ -43,9 +45,9 @@ export async function POST(req: NextRequest) {
       isActive?: boolean;
     };
 
-    if (!name || !email || !password || !positionId) {
+    if (!name || !username || !email || !password || !positionId) {
       return NextResponse.json(
-        { message: "Nama, email, password dan jabatan wajib diisi." },
+        { message: "Nama, username, email, password dan jabatan wajib diisi." },
         { status: 400 }
       );
     }
@@ -55,6 +57,7 @@ export async function POST(req: NextRequest) {
     const user = await prisma.user.create({
       data: {
         name,
+        username,
         email,
         passwordHash: hashed,
         positionId: Number(positionId),

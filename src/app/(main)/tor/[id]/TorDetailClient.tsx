@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle, XCircle, AlertCircle, Send } from "lucide-react";
+import { ConfirmModal } from "@/components/Modal";
+import { useConfirmModal } from "@/hooks/useModal";
 
 type Props = {
   torId: string;
@@ -22,51 +24,64 @@ export default function TorDetailClient({
   const [error, setError] = useState<string | null>(null);
   const [actionNote, setActionNote] = useState("");
   const [showNoteModal, setShowNoteModal] = useState<"revise" | "reject" | null>(null);
+  
+  // Modal hook
+  const confirmModal = useConfirmModal();
 
   async function handleSubmit() {
-    if (!confirm("Apakah Anda yakin ingin mengajukan TOR ini?")) return;
-    try {
-      setLoading("submit");
-      setError(null);
+    confirmModal.showConfirm(
+      "Apakah Anda yakin ingin mengajukan TOR ini?",
+      async () => {
+        try {
+          setLoading("submit");
+          setError(null);
 
-      const res = await fetch(`/api/tor/${torId}/submit`, {
-        method: "POST",
-      });
+          const res = await fetch(`/api/tor/${torId}/submit`, {
+            method: "POST",
+          });
 
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.message || "Gagal mengajukan TOR");
-      }
+          if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            throw new Error(data.message || "Gagal mengajukan TOR");
+          }
 
-      router.refresh();
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(null);
-    }
+          router.refresh();
+        } catch (err: any) {
+          setError(err.message);
+        } finally {
+          setLoading(null);
+        }
+      },
+      "info"
+    );
   }
 
   async function handleApprove() {
-    if (!confirm("Apakah Anda yakin ingin menyetujui TOR ini?")) return;
-    try {
-      setLoading("approve");
-      setError(null);
+    confirmModal.showConfirm(
+      "Apakah Anda yakin ingin menyetujui TOR ini?",
+      async () => {
+        try {
+          setLoading("approve");
+          setError(null);
 
-      const res = await fetch(`/api/tor/${torId}/approve`, {
-        method: "POST",
-      });
+          const res = await fetch(`/api/tor/${torId}/approve`, {
+            method: "POST",
+          });
 
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.message || "Gagal menyetujui TOR");
-      }
+          if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            throw new Error(data.message || "Gagal menyetujui TOR");
+          }
 
-      router.refresh();
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(null);
-    }
+          router.refresh();
+        } catch (err: any) {
+          setError(err.message);
+        } finally {
+          setLoading(null);
+        }
+      },
+      "info"
+    );
   }
 
   async function handleActionWithNote() {
@@ -200,6 +215,15 @@ export default function TorDetailClient({
           </div>
         </div>
       )}
+      
+      {/* Confirm Modal */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={confirmModal.close}
+        onConfirm={confirmModal.confirmCallback || (() => {})}
+        message={confirmModal.confirmMessage}
+        type={confirmModal.confirmType}
+      />
     </div>
   );
 }

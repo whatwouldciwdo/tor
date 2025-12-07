@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { Send, User, Calendar, TrendingUp, DollarSign, Trash2 } from "lucide-react";
 import ApprovalProgressBar from "./components/ApprovalProgressBar";
 import TorStatusBadge from "./components/TorStatusBadge";
+import { AlertModal, ConfirmModal } from "@/components/Modal";
+import { useAlertModal, useConfirmModal } from "@/hooks/useModal";
 
 type TorListItemProps = {
   tor: any;
@@ -17,57 +19,69 @@ type TorListItemProps = {
 export default function TorListItem({ tor, isCreator, view, workflowSteps = [] }: TorListItemProps) {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
+  
+  // Modal hooks
+  const alertModal = useAlertModal();
+  const confirmModal = useConfirmModal();
 
   const handleSubmit = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
-    if (!confirm("Submit this ToR for approval?")) return;
+    confirmModal.showConfirm(
+      "Submit this ToR for approval?",
+      async () => {
+        try {
+          setSubmitting(true);
+          const res = await fetch(`/api/tor/${tor.id}/submit`, {
+            method: "POST",
+          });
 
-    try {
-      setSubmitting(true);
-      const res = await fetch(`/api/tor/${tor.id}/submit`, {
-        method: "POST",
-      });
+          if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            throw new Error(data.message || "Failed to submit ToR");
+          }
 
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.message || "Failed to submit ToR");
-      }
-
-      alert("ToR submitted successfully!");
-      router.refresh();
-    } catch (error: any) {
-      alert(error.message);
-    } finally {
-      setSubmitting(false);
-    }
+          alertModal.showAlert("ToR submitted successfully!", "success");
+          router.refresh();
+        } catch (error: any) {
+          alertModal.showAlert(error.message, "error");
+        } finally {
+          setSubmitting(false);
+        }
+      },
+      "info"
+    );
   };
 
   const handleDelete = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
-    if (!confirm("Are you sure you want to delete this ToR? This action cannot be undone.")) return;
+    confirmModal.showConfirm(
+      "Are you sure you want to delete this ToR? This action cannot be undone.",
+      async () => {
+        try {
+          setSubmitting(true);
+          const res = await fetch(`/api/tor/${tor.id}`, {
+            method: "DELETE",
+          });
 
-    try {
-      setSubmitting(true);
-      const res = await fetch(`/api/tor/${tor.id}`, {
-        method: "DELETE",
-      });
+          if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            throw new Error(data.message || "Failed to delete ToR");
+          }
 
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.message || "Failed to delete ToR");
-      }
-
-      alert("ToR deleted successfully!");
-      router.refresh();
-    } catch (error: any) {
-      alert(error.message);
-    } finally {
-      setSubmitting(false);
-    }
+          alertModal.showAlert("ToR deleted successfully!", "success");
+          router.refresh();
+        } catch (error: any) {
+          alertModal.showAlert(error.message, "error");
+        } finally {
+          setSubmitting(false);
+        }
+      },
+      "danger"
+    );
   };
 
   return (
@@ -166,6 +180,21 @@ export default function TorListItem({ tor, isCreator, view, workflowSteps = [] }
           </div>
         )}
       </div>
+      
+      {/* Modals */}
+      <AlertModal
+        isOpen={alertModal.isOpen}
+        onClose={alertModal.close}
+        message={alertModal.alertMessage}
+        type={alertModal.alertType}
+      />
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={confirmModal.close}
+        onConfirm={confirmModal.confirmCallback || (() => {})}
+        message={confirmModal.confirmMessage}
+        type={confirmModal.confirmType}
+      />
     </Link>
   );
 }

@@ -24,6 +24,8 @@ export default async function TorListPage({ searchParams }: PageProps) {
     select: {
       id: true,
       name: true,
+      username: true,
+      email: true,
       positionId: true,
       isSuperAdmin: true,
       position: {
@@ -176,6 +178,7 @@ export default async function TorListPage({ searchParams }: PageProps) {
       stepNumber: step.stepNumber,
       label: step.label,
       statusStage: step.statusStage,
+      positionName: step.position?.name,
     }));
   });
 
@@ -196,12 +199,16 @@ export default async function TorListPage({ searchParams }: PageProps) {
       {/* Sidebar */}
       <Sidebar
         userName={userName}
+        userEmail={dbUser?.email || ""}
+        userUsername={dbUser?.username || ""}
+        userPosition={positionName}
+        userBidang={bidangName}
         isSuperAdmin={isSuperAdmin}
         canCreate={true}
       />
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col px-10 md:px-24 py-10">
+      <main className="flex-1 flex flex-col px-10 md:px-24 py-10 pl-32 ml-24">
         {/* Welcome Header */}
         <div className="flex justify-between items-start mb-8">
           <div className="space-y-4">

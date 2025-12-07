@@ -1,18 +1,39 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { Plus, Search, LogOut, Shield, FileText } from "lucide-react";
+import ProfileModal from "@/components/ProfileModal";
 
 type SidebarProps = {
   userName: string;
+  userEmail?: string;
+  userUsername?: string;
+  userPosition?: string;
+  userBidang?: string;
   isSuperAdmin: boolean;
   canCreate?: boolean;
 };
 
-export default function Sidebar({ userName, isSuperAdmin, canCreate = true }: SidebarProps) {
+export default function Sidebar({ 
+  userName, 
+  userEmail = "",
+  userUsername = "",
+  userPosition = "",
+  userBidang = "",
+  isSuperAdmin, 
+  canCreate = true 
+}: SidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [profileData, setProfileData] = useState({
+    name: userName,
+    username: userUsername,
+    email: userEmail,
+    position: userPosition,
+    bidang: userBidang,
+  });
 
   const initials = useMemo(
     () =>
@@ -35,6 +56,30 @@ export default function Sidebar({ userName, isSuperAdmin, canCreate = true }: Si
     } finally {
       router.push("/login");
     }
+  };
+
+  const handleProfileUpdate = async (data: { email?: string; currentPassword?: string; newPassword?: string }) => {
+    const response = await fetch("/api/profile", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || "Failed to update profile");
+    }
+
+    const result = await response.json();
+    
+    // Update local profile data
+    setProfileData({
+      name: result.user.name,
+      username: result.user.username,
+      email: result.user.email,
+      position: result.user.position?.name || "",
+      bidang: result.user.position?.bidang?.name || "",
+    });
   };
 
   const menuItems = [
@@ -70,12 +115,23 @@ export default function Sidebar({ userName, isSuperAdmin, canCreate = true }: Si
   ];
 
   return (
-    <aside className="w-24 bg-[#1f1f1f] border-r border-[#42ff6b] flex flex-col items-center justify-between py-8 flex-shrink-0">
+    <>
+    <aside className="fixed left-0 top-0 h-screen w-24 bg-[#1f1f1f] border-r border-[#42ff6b] flex flex-col items-center justify-between py-8 flex-shrink-0 overflow-y-auto z-50">
       {/* Avatar */}
       <div className="flex flex-col items-center gap-4">
-        <div className="w-14 h-14 rounded-full bg-[#42ff6b] flex items-center justify-center text-black font-semibold text-lg">
-          {initials}
-        </div>
+        {pathname === "/tor" ? (
+          <button
+            onClick={() => setShowProfileModal(true)}
+            className="w-14 h-14 rounded-full bg-[#42ff6b] flex items-center justify-center text-black font-semibold text-lg hover:bg-[#38e05c] hover:scale-110 transition-all duration-300 cursor-pointer shadow-lg hover:shadow-[#42ff6b]/50"
+            title="Profile Settings"
+          >
+            {initials}
+          </button>
+        ) : (
+          <div className="w-14 h-14 rounded-full bg-[#42ff6b] flex items-center justify-center text-black font-semibold text-lg">
+            {initials}
+          </div>
+        )}
       </div>
 
       {/* Menu Items */}
@@ -120,5 +176,14 @@ export default function Sidebar({ userName, isSuperAdmin, canCreate = true }: Si
 
       <div className="h-10" />
     </aside>
+    
+    {/* Profile Modal */}
+    <ProfileModal
+      isOpen={showProfileModal}
+      onClose={() => setShowProfileModal(false)}
+      userData={profileData}
+      onUpdate={handleProfileUpdate}
+    />
+  </>
   );
 }

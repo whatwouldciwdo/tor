@@ -49,6 +49,7 @@ export default async function EditUserPage({ params }: PageProps) {
   const initialData = {
     id: user.id,
     name: user.name,
+    username: user.username || '',
     email: user.email,
     positionId: user.positionId,
     isSuperAdmin: user.isSuperAdmin,

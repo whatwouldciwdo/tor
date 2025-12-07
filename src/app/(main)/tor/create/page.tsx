@@ -17,13 +17,18 @@ export default async function CreateTorPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const user = await getCurrentUser();
 
-  // Get user's bidang info
+  // Get user's bidang info and roles
   const dbUser = await prisma.user.findUnique({
     where: { id: user.id },
     include: {
       position: {
         include: {
           bidang: true,
+          positionRoles: {
+            include: {
+              role: true,
+            },
+          },
         },
       },
     },
@@ -39,7 +44,11 @@ export default async function CreateTorPage({ searchParams }: PageProps) {
 
   const bidangId = dbUser.position.bidangId ?? undefined;
   const bidangName = dbUser.position.bidang?.name || "Unknown";
-  const creatorName =dbUser.name;
+  const creatorName = dbUser.name;
+
+  // Check if user has EXPORT role
+  const userRoles = dbUser.position.positionRoles.map(pr => pr.role.name);
+  const hasExportRole = dbUser.isSuperAdmin || userRoles.includes("EXPORT");
 
   // If editing existing ToR
   if (params?.id) {
@@ -128,6 +137,7 @@ export default async function CreateTorPage({ searchParams }: PageProps) {
             bidangName={bidangName}
             creatorName={tor.creator?.name || creatorName}
             creatorPosition={tor.creator?.position?.name || dbUser.position.name}
+            hasExportRole={hasExportRole}
           />
         </div>
       </div>
@@ -148,6 +158,7 @@ export default async function CreateTorPage({ searchParams }: PageProps) {
           bidangName={bidangName}
           creatorName={creatorName}
           creatorPosition={dbUser.position.name}
+          hasExportRole={hasExportRole}
         />
       </div>
     </div>

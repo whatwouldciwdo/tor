@@ -118,10 +118,10 @@ async function main() {
   // =========================
 
   // Outage
-  const soTurbine = await ensurePositionByName(
-    "SENIOR OFFICER ENJINIRING TURBIN DAN GENERATOR UBP CLG",
+  const soBoiler = await ensurePositionByName(
+    "SENIOR OFFICER ENJINIRING BOILER DAN HRSG UBP CLG",
     {
-      name: "SENIOR OFFICER ENJINIRING TURBIN DAN GENERATOR UBP CLG",
+      name: "SENIOR OFFICER ENJINIRING BOILER DAN HRSG UBP CLG",
       bidangId: outageBidang.id,
       levelOrder: 1,
     }
@@ -166,10 +166,28 @@ async function main() {
     }
   );
 
+  const soTurbineMesin = await ensurePositionByName(
+    "SENIOR OFFICER ENJINIRING TURBIN DAN GENERATOR UBP CLG",
+    {
+      name: "SENIOR OFFICER ENJINIRING TURBIN DAN GENERATOR UBP CLG",
+      bidangId: harMecBidang.id,
+      levelOrder: 1,
+    }
+  );
+
   const tlHarMec = await ensurePositionByName(
     "TEAM LEADER PEMELIHARAAN LISTRIK UNIT DAN BOP UBP CLG",
     {
       name: "TEAM LEADER PEMELIHARAAN LISTRIK UNIT DAN BOP UBP CLG",
+      bidangId: harMecBidang.id,
+      levelOrder: 2,
+    }
+  );
+
+  const tlMesin = await ensurePositionByName(
+    "TEAM LEADER PEMELIHARAAN MESIN UBP CLG",
+    {
+      name: "TEAM LEADER PEMELIHARAAN MESIN UBP CLG",
       bidangId: harMecBidang.id,
       levelOrder: 2,
     }
@@ -190,6 +208,15 @@ async function main() {
     bidangId: harBopBidang.id,
     levelOrder: 2,
   });
+
+  const tlBop = await ensurePositionByName(
+    "TEAM LEADER PEMELIHARAAN MESIN BOP, BENGKEL DAN TOOLS UBP CLG",
+    {
+      name: "TEAM LEADER PEMELIHARAAN MESIN BOP, BENGKEL DAN TOOLS UBP CLG",
+      bidangId: harBopBidang.id,
+      levelOrder: 2,
+    }
+  );
 
   // Bidang K3
   const soK3 = await ensurePositionByName(
@@ -341,7 +368,7 @@ async function main() {
   const mappings = [
     // === CREATOR group tiap bidang ===
     // Outage
-    { positionId: soTurbine.id, roleNames: ["CREATOR", "EDITOR"] },
+    { positionId: soBoiler.id, roleNames: ["CREATOR", "EDITOR"] },
     { positionId: officerOutage.id, roleNames: ["CREATOR", "EDITOR"] },
 
     // HAR Listrik
@@ -350,11 +377,14 @@ async function main() {
 
     // HAR MEC
     { positionId: soHarMec.id, roleNames: ["CREATOR", "EDITOR"] },
+    { positionId: soTurbineMesin.id, roleNames: ["CREATOR", "EDITOR"] },
     { positionId: tlHarMec.id, roleNames: ["CREATOR", "EDITOR"] },
+    { positionId: tlMesin.id, roleNames: ["CREATOR", "EDITOR"] },
 
     // HAR BOP
     { positionId: soHarBop.id, roleNames: ["CREATOR", "EDITOR"] },
     { positionId: officerBop.id, roleNames: ["CREATOR", "EDITOR"] },
+    { positionId: tlBop.id, roleNames: ["CREATOR", "EDITOR"] },
 
     // K3
     { positionId: soK3.id, roleNames: ["CREATOR", "EDITOR"] },
@@ -379,9 +409,10 @@ async function main() {
     // Asman Lim (GLOBAL):
     // - Approval 2 untuk semua bidang teknis
     // - Approval 1 di Bidang Umum
+    // - EXPORT: dapat export TOR dokumen
     {
       positionId: asmanLim.id,
-      roleNames: ["APPROVAL_1", "APPROVAL_2", "EDITOR", "REVISE"],
+      roleNames: ["APPROVAL_1", "APPROVAL_2", "EDITOR", "REVISE", "EXPORT"],
     },
 
     // Manager Pemeliharaan (Outage) → Approval 3 + REVISE
@@ -770,9 +801,11 @@ async function main() {
     where: { email: "superadmin@tor.local" },
     update: {
       passwordHash: superAdminPassword,
+      username: "admin",
     },
     create: {
       name: "Super Admin",
+      username: "admin",
       email: "superadmin@tor.local",
       passwordHash: superAdminPassword,
       positionId: superAdminPosition.id,
@@ -784,9 +817,11 @@ async function main() {
     where: { email: "officer.outage@tor.local" },
     update: {
       passwordHash: officerPassword,
+      username: "officer.outage",
     },
     create: {
       name: "Officer Outage Demo",
+      username: "officer.outage",
       email: "officer.outage@tor.local",
       passwordHash: officerPassword,
       positionId: officerOutage.id,
@@ -794,9 +829,114 @@ async function main() {
     },
   });
 
+  // User #11 - Asman HAR Listrik
+  const asmanHarLisPassword = await bcrypt.hash("asman123", 10);
+  const user11 = await prisma.user.upsert({
+    where: { email: "asman.harlis@tor.local" },
+    update: {
+      passwordHash: asmanHarLisPassword,
+      username: "asman.harlis",
+    },
+    create: {
+      name: "SYAHRIAL NURUL HUDA",
+      username: "asman.harlis",
+      email: "asman.harlis@tor.local",
+      passwordHash: asmanHarLisPassword,
+      positionId: asmanHarLis.id, // ID 15
+      isSuperAdmin: false,
+    },
+  });
+
+  // User #12 - Asman HAR Mekanik
+  const asmanHarMecPassword = await bcrypt.hash("asman123", 10);
+  const user12 = await prisma.user.upsert({
+    where: { email: "asman.harmec@tor.local" },
+    update: {
+      passwordHash: asmanHarMecPassword,
+      username: "asman.harmec",
+    },
+    create: {
+      name: "YUNARKO",
+      username: "asman.harmec",
+      email: "asman.harmec@tor.local",
+      passwordHash: asmanHarMecPassword,
+      positionId: asmanHarMec.id, // ID 16
+      isSuperAdmin: false,
+    },
+  });
+
   console.log("Users seeded:");
-  console.log("  Super Admin:", superAdminUser.email);
-  console.log("  Officer Outage:", officerUser.email);
+  console.log("  Super Admin:", superAdminUser.email, "| username:", superAdminUser.username);
+  console.log("  Officer Outage:", officerUser.email, "| username:", officerUser.username);
+  console.log("  User #11 (Asman HAR Listrik):", user11.email, "| username:", user11.username);
+  console.log("  User #12 (Asman HAR Mekanik):", user12.email, "| username:", user12.username);
+
+  // 7. Cross-Bidang Access untuk User #11 dan #12
+  console.log("\n🌱 Seeding Cross-Bidang Access...");
+
+  // User #11: Akses ke Bidang Pemeliharaan Listrik + Instrumen
+  await prisma.positionBidangAccess.upsert({
+    where: {
+      positionId_bidangId: {
+        positionId: asmanHarLis.id,
+        bidangId: harLisBidang.id,
+      },
+    },
+    create: {
+      positionId: asmanHarLis.id,
+      bidangId: harLisBidang.id,
+    },
+    update: {},
+  });
+  console.log(`  ✓ User #11 can access: ${harLisBidang.name}`);
+
+  await prisma.positionBidangAccess.upsert({
+    where: {
+      positionId_bidangId: {
+        positionId: asmanHarLis.id,
+        bidangId: harInsBidang.id,
+      },
+    },
+    create: {
+      positionId: asmanHarLis.id,
+      bidangId: harInsBidang.id,
+    },
+    update: {},
+  });
+  console.log(`  ✓ User #11 can access: ${harInsBidang.name}`);
+
+  // User #12: Akses ke Bidang Pemeliharaan Mesin + BOP
+  await prisma.positionBidangAccess.upsert({
+    where: {
+      positionId_bidangId: {
+        positionId: asmanHarMec.id,
+        bidangId: harMecBidang.id,
+      },
+    },
+    create: {
+      positionId: asmanHarMec.id,
+      bidangId: harMecBidang.id,
+    },
+    update: {},
+  });
+  console.log(`  ✓ User #12 can access: ${harMecBidang.name}`);
+
+  await prisma.positionBidangAccess.upsert({
+    where: {
+      positionId_bidangId: {
+        positionId: asmanHarMec.id,
+        bidangId: harBopBidang.id,
+      },
+    },
+    create: {
+      positionId: asmanHarMec.id,
+      bidangId: harBopBidang.id,
+    },
+    update: {},
+  });
+  console.log(`  ✓ User #12 can access: ${harBopBidang.name}`);
+
+  console.log("✅ Cross-Bidang Access seeded successfully!\n");
 
   console.log("Seeding done ✅");
 }

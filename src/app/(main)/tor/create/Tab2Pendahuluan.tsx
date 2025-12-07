@@ -3,10 +3,16 @@
 import { TabProps } from "./types";
 import TiptapEditor from "./components/TiptapEditor";
 import { useState } from "react";
+import { AlertModal, ConfirmModal } from "@/components/Modal";
+import { useAlertModal, useConfirmModal } from "@/hooks/useModal";
 
 export default function Tab2Pendahuluan({ formData, onChange, isEditing = false }: TabProps) {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  
+  // Modal hooks
+  const alertModal = useAlertModal();
+  const confirmModal = useConfirmModal();
 
   const handleInputChange = (field: string, value: any) => {
     if (!isEditing) return; // Prevent changes when not editing
@@ -25,7 +31,7 @@ export default function Tab2Pendahuluan({ formData, onChange, isEditing = false 
     if (!allowedTypes.includes(file.type)) {
       setUploadError("Format file tidak valid. Hanya gambar yang diperbolehkan.");
       setUploading(false);
-      alert("Format file tidak valid. Hanya gambar yang diperbolehkan.");
+      alertModal.showAlert("Format file tidak valid. Hanya gambar yang diperbolehkan.", "error");
       return;
     }
 
@@ -34,7 +40,7 @@ export default function Tab2Pendahuluan({ formData, onChange, isEditing = false 
     if (file.size > maxSize) {
       setUploadError("Ukuran file melebihi 5MB");
       setUploading(false);
-      alert("Ukuran file melebihi 5MB");
+      alertModal.showAlert("Ukuran file melebihi 5MB", "error");
       return;
     }
 
@@ -68,11 +74,11 @@ export default function Tab2Pendahuluan({ formData, onChange, isEditing = false 
       // Update form data dengan path image (WITHOUT leading slash)
       handleInputChange("coverImage", data.url);
       
-      alert("Gambar berhasil diupload!");
+      alertModal.showAlert("Gambar berhasil diupload!", "success");
     } catch (error: any) {
       console.error("❌ Upload error:", error);
       setUploadError(error.message);
-      alert(`Gagal upload gambar: ${error.message}`);
+      alertModal.showAlert(`Gagal upload gambar: ${error.message}`, "error");
     } finally {
       setUploading(false);
       // Reset input so same file can be uploaded again if needed
@@ -81,10 +87,14 @@ export default function Tab2Pendahuluan({ formData, onChange, isEditing = false 
   };
 
   const handleRemoveImage = () => {
-    if (confirm("Hapus gambar cover?")) {
-      handleInputChange("coverImage", null);
-      setUploadError(null);
-    }
+    confirmModal.showConfirm(
+      "Hapus gambar cover?",
+      () => {
+        handleInputChange("coverImage", null);
+        setUploadError(null);
+      },
+      "warning"
+    );
   };
 
   return (
@@ -267,6 +277,21 @@ export default function Tab2Pendahuluan({ formData, onChange, isEditing = false 
           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed"
         />
       </div>
+      
+      {/* Modals */}
+      <AlertModal
+        isOpen={alertModal.isOpen}
+        onClose={alertModal.close}
+        message={alertModal.alertMessage}
+        type={alertModal.alertType}
+      />
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={confirmModal.close}
+        onConfirm={confirmModal.confirmCallback || (() => {})}
+        message={confirmModal.confirmMessage}
+        type={confirmModal.confirmType}
+      />
     </div>
   );
 }

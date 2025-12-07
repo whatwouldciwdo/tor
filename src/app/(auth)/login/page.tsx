@@ -6,8 +6,8 @@ import { FormEvent, useState } from "react";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("officer.outage@tor.local");
-  const [password, setPassword] = useState("officer123");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -20,7 +20,7 @@ export default function LoginPage() {
       const res = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ username, password }),
       });
 
       if (!res.ok) {
@@ -60,7 +60,18 @@ export default function LoginPage() {
       {/* Panel kanan (form) */}
       <section className="flex-1 flex items-center justify-center px-6 md:px-16">
         <div className="w-full max-w-md space-y-10">
-          <div>
+          <div className="flex flex-col items-center text-center">
+            {/* Logo */}
+            <div className="mb-6">
+              <Image
+                src="/pln-tos-logo.jpg"
+                alt="TOR Logo"
+                width={180}
+                height={180}
+                className="object-contain"
+              />
+            </div>
+            
             <h1 className="text-4xl md:text-5xl font-serif font-semibold">
               [TOS] Tor Online System
             </h1>
@@ -72,19 +83,19 @@ export default function LoginPage() {
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
               <input
-                type="email"
-                placeholder="Enter your email"
+                type="text"
+                placeholder="username"
                 className="w-full rounded-md border border-[#42ff6b] bg-transparent px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#42ff6b] focus:border-transparent placeholder:text-gray-400"
                 style={{ color: 'white' }}
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                autoComplete="email"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                autoComplete="username"
               />
             </div>
             <div>
               <input
                 type="password"
-                placeholder="Enter your password"
+                placeholder="password"
                 className="w-full rounded-md border border-[#42ff6b] bg-transparent px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#42ff6b] focus:border-transparent placeholder:text-gray-400"
                 style={{ color: 'white' }}
                 value={password}

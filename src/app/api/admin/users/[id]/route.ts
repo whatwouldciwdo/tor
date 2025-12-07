@@ -40,6 +40,7 @@ export async function PUT(req: NextRequest, { params }: RouteContext) {
     const body = await req.json();
     const {
       name,
+      username,
       email,
       positionId,
       password,
@@ -47,6 +48,7 @@ export async function PUT(req: NextRequest, { params }: RouteContext) {
       isActive,
     } = body as {
       name?: string;
+      username?: string;
       email?: string;
       positionId?: number | null;
       password?: string | null;
@@ -54,15 +56,16 @@ export async function PUT(req: NextRequest, { params }: RouteContext) {
       isActive?: boolean;
     };
 
-    if (!name || !email || !positionId) {
+    if (!name || !username || !email || !positionId) {
       return NextResponse.json(
-        { message: "Nama, email, dan jabatan wajib diisi." },
+        { message: "Nama, username, email, dan jabatan wajib diisi." },
         { status: 400 }
       );
     }
 
     const dataToUpdate: any = {
       name,
+      username,
       email,
       positionId: Number(positionId),
       isSuperAdmin: !!isSuperAdmin,

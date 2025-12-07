@@ -127,6 +127,58 @@ export async function POST(req: NextRequest, context: RouteContext) {
       },
     });
 
+    // Send email notifications
+    try {
+      const { sendApprovalNotification } = await import("@/lib/email");
+      
+      // 1. Notify creator about approval progress
+      const creator = await prisma.user.findUnique({
+        where: { id: tor.creatorUserId },
+      });
+
+      if (creator?.email) {
+        await sendApprovalNotification({
+          to: creator.email,
+          torNumber: tor.number || 'N/A',
+          torTitle: tor.title,
+          approverName: user.name,
+          stepLabel: currentStep.label,
+          isLastStep: isFinal,
+          viewLink: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/tor/${tor.id}`,
+        });
+      }
+
+      // 2. If not final, notify next approver
+      if (!isFinal) {
+        const nextStep = workflow.steps.find(
+          (s) => s.stepNumber === nextStepNumber
+        );
+        
+        if (nextStep) {
+          const nextApprover = await prisma.user.findFirst({
+            where: { 
+              positionId: nextStep.positionId, 
+              isActive: true 
+            },
+          });
+
+          if (nextApprover?.email) {
+            const { sendSubmitNotification } = await import("@/lib/email");
+            await sendSubmitNotification({
+              to: nextApprover.email,
+              torNumber: tor.number || 'N/A',
+              torTitle: tor.title,
+              creatorName: creator?.name || 'Unknown',
+              approvalLink: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/tor/${tor.id}`,
+            });
+          }
+        }
+      }
+    } catch (emailError) {
+      console.error("Failed to send approval notification email:", emailError);
+      // Don't fail the approval if email fails
+    }
+
     return NextResponse.json({
       message: "ToR approved successfully",
       tor: updatedTor,

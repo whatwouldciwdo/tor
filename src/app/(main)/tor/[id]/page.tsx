@@ -114,13 +114,25 @@ export default async function TorDetailPage({ params }: PageProps) {
     (dbUser.isSuperAdmin ||
       (currentStep && dbUser.positionId === currentStep.positionId));
 
+  // Helper function to format dates for HTML date inputs (YYYY-MM-DD)
+  const formatDateForInput = (date: Date | string | null | undefined): string => {
+    if (!date) return "";
+    try {
+      const d = typeof date === "string" ? new Date(date) : date;
+      if (isNaN(d.getTime())) return "";
+      return d.toISOString().split("T")[0]; // Returns YYYY-MM-DD
+    } catch {
+      return "";
+    }
+  };
+
   // Format TOR data for TorFormLayout
   const torFormData = {
     ...tor,
     number: tor.number || undefined,
-    creationDate: tor.creationDate || "",
-    projectStartDate: tor.projectStartDate || "",
-    projectEndDate: tor.projectEndDate || "",
+    creationDate: formatDateForInput(tor.creationDate),
+    projectStartDate: formatDateForInput(tor.projectStartDate),
+    projectEndDate: formatDateForInput(tor.projectEndDate),
     workStages: tor.workStagesData,
     directorProposals: tor.directorProposals || [],
     fieldDirectorProposals: tor.fieldDirectorProposals || [],

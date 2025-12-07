@@ -9,17 +9,17 @@ const JWT_SECRET = process.env.JWT_SECRET!;
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { email, password } = body as { email?: string; password?: string };
+    const { username, password } = body as { username?: string; password?: string };
 
-    if (!email || !password) {
+    if (!username || !password) {
       return NextResponse.json(
-        { message: "Email dan password wajib diisi" },
+        { message: "Username dan password wajib diisi" },
         { status: 400 }
       );
     }
 
     const user = await prisma.user.findUnique({
-      where: { email },
+      where: { username },
       include: {
         position: {
           include: {
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
 
     if (!user || !user.isActive) {
       return NextResponse.json(
-        { message: "Email atau password tidak valid" },
+        { message: "Username atau password tidak valid" },
         { status: 401 }
       );
     }
@@ -42,15 +42,16 @@ export async function POST(req: NextRequest) {
     const passwordOk = await bcrypt.compare(password, user.passwordHash);
     if (!passwordOk) {
       return NextResponse.json(
-        { message: "Email atau password tidak valid" },
+        { message: "Username atau password tidak valid" },
         { status: 401 }
       );
     }
 
-    // Buat token
+    // Buat token (keep email for notifications)
     const token = jwt.sign(
       {
         sub: user.id,
+        username: user.username,
         email: user.email,
         name: user.name,
         positionId: user.positionId,

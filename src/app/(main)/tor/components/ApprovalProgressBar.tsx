@@ -6,6 +6,7 @@ interface WorkflowStep {
   stepNumber: number;
   label: string;
   statusStage: string;
+  positionName?: string;
 }
 
 interface ApprovalProgressBarProps {
@@ -43,7 +44,7 @@ export default function ApprovalProgressBar({
     return (
       <div className={`space-y-2 ${className}`}>
         {/* Progress Bar */}
-        <div className="relative h-2 bg-gray-200 rounded-full overflow-hidden">
+        <div className="relative h-3 bg-gray-700/50 rounded-full overflow-hidden border border-gray-600">
           <div
             className="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-500 ease-out"
             style={{ width: `${getProgressPercentage()}%` }}
@@ -64,12 +65,12 @@ export default function ApprovalProgressBar({
               >
                 {/* Step Circle */}
                 <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold transition-all duration-300 ${
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold transition-all duration-300 border-2 ${
                     status === "completed"
-                      ? "bg-green-500 text-white shadow-lg shadow-green-500/50"
+                      ? "bg-green-500 text-white shadow-lg shadow-green-500/50 border-green-400"
                       : status === "current"
-                      ? "bg-blue-500 text-white shadow-lg shadow-blue-500/50 animate-pulse"
-                      : "bg-gray-300 text-gray-600"
+                      ? "bg-blue-500 text-white shadow-lg shadow-blue-500/50 animate-pulse border-blue-400"
+                      : "bg-gray-600 text-gray-200 border-gray-500"
                   }`}
                 >
                   {status === "completed" ? (
@@ -81,17 +82,20 @@ export default function ApprovalProgressBar({
 
                 {/* Step Label (hidden on mobile) */}
                 <div
-                  className={`mt-1 text-[10px] text-center max-w-[60px] hidden sm:block ${
+                  className={`mt-1 text-[10px] text-center max-w-[80px] hidden sm:block ${
                     status === "current"
-                      ? "text-blue-600 font-semibold"
+                      ? "text-blue-400 font-semibold"
                       : status === "completed"
-                      ? "text-green-600"
-                      : "text-gray-500"
+                      ? "text-green-400"
+                      : "text-gray-400"
                   }`}
                 >
-                  {step.label.length > 15
-                    ? step.label.substring(0, 12) + "..."
-                    : step.label}
+                  {(() => {
+                    const displayText = step.positionName || step.label;
+                    return displayText.length > 20
+                      ? displayText.substring(0, 17) + "..."
+                      : displayText;
+                  })()}
                 </div>
               </div>
             );
@@ -99,18 +103,21 @@ export default function ApprovalProgressBar({
         </div>
 
         {/* Status Text */}
-        <div className="text-xs text-center text-gray-600">
+        <div className="text-xs text-center text-gray-300">
           {isFinalApproved ? (
-            <span className="text-green-600 font-semibold flex items-center justify-center gap-1">
+            <span className="text-green-400 font-semibold flex items-center justify-center gap-1">
               <CheckCircle2 size={14} />
               Fully Approved
             </span>
           ) : currentStepNumber === 0 ? (
-            <span className="text-gray-500">Not Submitted</span>
+            <span className="text-gray-400">Not Submitted</span>
           ) : (
-            <span className="text-blue-600">
+            <span className="text-blue-400">
               Step {currentStepNumber} of {totalSteps}:{" "}
-              {sortedSteps.find((s) => s.stepNumber === currentStepNumber)?.label || "Unknown"}
+              {(() => {
+                const currentStep = sortedSteps.find((s) => s.stepNumber === currentStepNumber);
+                return currentStep?.positionName || currentStep?.label || "Unknown";
+              })()}
             </span>
           )}
         </div>
@@ -180,7 +187,7 @@ export default function ApprovalProgressBar({
                       : "text-gray-500"
                   }`}
                 >
-                  Step {step.stepNumber}: {step.label}
+                  Step {step.stepNumber}: {step.positionName || step.label}
                 </div>
                 <div className="text-xs text-gray-500 mt-0.5">
                   Status: {step.statusStage}

@@ -1173,10 +1173,10 @@ function generateLembarPengesahanTable(
           width: { size: 70, type: WidthType.PERCENTAGE },
           alignment: AlignmentType.CENTER,
         }),
-        // Add spacing between tables
+        // Add spacing between tables (reduced to fit 1 page)
         new Paragraph({
           children: [new TextRun({ text: "", font: "Arial", size: 20 })],
-          spacing: { before: 200, after: 200 },
+          spacing: { before: 100, after: 100 },
         })
       );
     });
@@ -1350,6 +1350,9 @@ export async function GET(
                         // Right Logo
                         new TableCell({
                           width: { size: 20, type: WidthType.PERCENTAGE },
+                          margins: {
+                            right: 500, // Increased margin to prevent cutoff
+                          },
                           children: [
                             secondaryLogoBuffer ? new Paragraph({
                               children: [
@@ -1359,7 +1362,7 @@ export async function GET(
                                   type: "png",
                                 }),
                               ],
-                              alignment: AlignmentType.RIGHT,
+                              alignment: AlignmentType.LEFT,
                             }) : new Paragraph(""),
                           ],
                         }),

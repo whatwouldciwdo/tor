@@ -84,6 +84,29 @@ export async function POST(req: NextRequest, context: RouteContext) {
       },
     });
 
+    // Send email notification to creator
+    try {
+      const { sendRejectionNotification } = await import("@/lib/email");
+      
+      const creator = await prisma.user.findUnique({
+        where: { id: tor.creatorUserId },
+      });
+
+      if (creator?.email) {
+        await sendRejectionNotification({
+          to: creator.email,
+          torNumber: tor.number || 'N/A',
+          torTitle: tor.title,
+          rejectorName: user.name,
+          rejectionNote: note,
+          viewLink: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/tor/${tor.id}`,
+        });
+      }
+    } catch (emailError) {
+      console.error("Failed to send rejection notification email:", emailError);
+      // Don't fail the rejection if email fails
+    }
+
     return NextResponse.json({
       message: "ToR rejected (returned to revision)",
       tor: updatedTor,

@@ -46,6 +46,8 @@ import {
   ChevronLeft,
   ChevronDown,
 } from "lucide-react";
+import { PromptModal } from "@/components/Modal";
+import { usePromptModal } from "@/hooks/useModal";
 
 interface TiptapEditorProps {
   content?: string;  // Made optional to accept undefined from form data
@@ -54,6 +56,7 @@ interface TiptapEditorProps {
   label?: string;
   required?: boolean;
   readOnly?: boolean;
+  onCaptionPrompt?: (currentCaption: string, onConfirm: (newCaption: string) => void) => void;
 }
 
 // ✅ Custom Figure extension with caption support - users manually type full caption including numbering
@@ -142,6 +145,9 @@ const CustomFigure = Image.extend({
 
   addNodeView() {
     return ({ node, editor, getPos }) => {
+      // Get onCaptionPrompt from editor options
+      const onCaptionPrompt = (editor as any).options?.onCaptionPrompt;
+      
       const figure = document.createElement('figure');
       figure.className = 'image-figure';
       figure.style.cssText = 'max-width: 100%; margin: 1em 0; position: relative; display: inline-block;';
@@ -259,17 +265,30 @@ const CustomFigure = Image.extend({
         e.preventDefault();
         e.stopPropagation();
         
-        const newCaption = prompt(
-          'Masukkan keterangan gambar (contoh: "Gambar: 1. Deskripsi gambar"):',
-          node.attrs.caption || ''
-        );
-        
-        if (newCaption !== null) {
-          const pos = getPos();
-          if (typeof pos === 'number') {
-            editor.commands.updateAttributes('figure', {
-              caption: newCaption,
-            });
+        // Use custom prompt modal if provided
+        if (onCaptionPrompt) {
+          onCaptionPrompt(node.attrs.caption || '', (newCaption: string) => {
+            const pos = getPos();
+            if (typeof pos === 'number') {
+              editor.commands.updateAttributes('figure', {
+                caption: newCaption,
+              });
+            }
+          });
+        } else {
+          // Fallback to browser prompt
+          const newCaption = prompt(
+            'Masukkan keterangan gambar (contoh: "Gambar: 1. Deskripsi gambar"):',
+            node.attrs.caption || ''
+          );
+          
+          if (newCaption !== null) {
+            const pos = getPos();
+            if (typeof pos === 'number') {
+              editor.commands.updateAttributes('figure', {
+                caption: newCaption,
+              });
+            }
           }
         }
       });
@@ -311,11 +330,12 @@ const CustomFigure = Image.extend({
                 reader.onload = (readerEvent) => {
                   const base64 = readerEvent.target?.result as string;
                   
-                  // Insert image with base64 data and default size
-                  const node = view.state.schema.nodes.image.create({
+                  // Insert figure (not image) with base64 data and default size
+                  const node = view.state.schema.nodes.figure.create({
                     src: base64,
                     alt: file.name,
                     width: '600px', // Default width
+                    caption: '', // Empty caption initially
                   });
                   
                   const transaction = view.state.tr.replaceSelectionWith(node);
@@ -348,10 +368,11 @@ const CustomFigure = Image.extend({
                 reader.onload = (readerEvent) => {
                   const base64 = readerEvent.target?.result as string;
                   
-                  const node = view.state.schema.nodes.image.create({
+                  const node = view.state.schema.nodes.figure.create({
                     src: base64,
                     alt: file.name,
                     width: '600px', // Default width
+                    caption: '', // Empty caption initially
                   });
                   
                   const pos = view.posAtCoords({ 
@@ -408,7 +429,7 @@ const CustomOrderedList = OrderedList.extend({
   },
 });
 
-const MenuBar = ({ editor }: any) => {
+const MenuBar = ({ editor, promptModal }: any) => {
   const [showListStyleDropdown, setShowListStyleDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -468,19 +489,20 @@ const MenuBar = ({ editor }: any) => {
 
   const setLink = useCallback(() => {
     const previousUrl = editor.getAttributes("link").href;
-    const url = window.prompt("URL", previousUrl);
+    
+    promptModal.showPrompt(
+      "Masukkan URL link:",
+      (url: string) => {
+        if (url === "") {
+          editor.chain().focus().extendMarkRange("link").unsetLink().run();
+          return;
+        }
 
-    if (url === null) {
-      return;
-    }
-
-    if (url === "") {
-      editor.chain().focus().extendMarkRange("link").unsetLink().run();
-      return;
-    }
-
-    editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
-  }, [editor]);
+        editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
+      },
+      previousUrl || ""
+    );
+  }, [editor, promptModal]);
 
   // Set list style type using Tiptap commands
   const setListStyle = (style: string) => {
@@ -895,6 +917,8 @@ export default function TiptapEditor({
   required = false,
   readOnly = false,
 }: TiptapEditorProps) {
+  // Prompt modal for image captions
+  const promptModal = usePromptModal();
   const editor = useEditor({
     immediatelyRender: false, // Fix SSR hydration error
     editable: !readOnly, // Control editability
@@ -957,7 +981,7 @@ export default function TiptapEditor({
         HTMLAttributes: {
           class: "max-w-full h-auto rounded my-2",
           // ✅ Enable resize handles
-          style: "cursor: pointer; max-width: 100%;",
+          style: "cursor: pointer; max-w-100%;",
         },
       }),
     ],
@@ -971,10 +995,17 @@ export default function TiptapEditor({
     editorProps: {
       attributes: {
         class:
-          `prose prose-sm sm:prose lg:prose-lg xl:prose-xl max-w-none focus:outline-none min-h-[300px] p-4 text-gray-900 ${
-            readOnly ? "bg-gray-50 cursor-default" : ""
+          `prose prose-sm sm:prose lg:prose-lg xl:prose-2xl max-w-none focus:outline-none min-h-[200px] p-4 text-gray-900 ${
+            readOnly ? "pointer-events-none" : ""
           }`,
       },
+    },
+    onCaptionPrompt: (currentCaption: string, onConfirm: (newCaption: string) => void) => {
+      promptModal.showPrompt(
+        'Masukkan keterangan gambar (contoh: "Gambar 1. Deskripsi gambar"):',
+        onConfirm,
+        currentCaption
+      );
     },
   });
 
@@ -1149,10 +1180,20 @@ export default function TiptapEditor({
         <div className={`border rounded-lg overflow-hidden shadow-sm ${
           readOnly ? "border-gray-200 bg-gray-50" : "border-gray-300 bg-white"
         }`}>
-          {!readOnly && <MenuBar editor={editor} />}
+          {!readOnly && <MenuBar editor={editor} promptModal={promptModal} />}
           <EditorContent editor={editor} />
         </div>
       </div>
+      
+      {/* Prompt Modal for Image Caption */}
+      <PromptModal
+        isOpen={promptModal.isOpen}
+        onClose={promptModal.close}
+        onConfirm={promptModal.promptCallback || (() => {})}
+        message={promptModal.promptMessage}
+        defaultValue={promptModal.promptDefaultValue}
+        placeholder="Gambar 1. Deskripsi gambar"
+      />
     </>
   );
 }

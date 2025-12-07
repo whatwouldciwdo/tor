@@ -4,6 +4,8 @@ import { TabProps, ApprovalSignature } from "./types";
 import { Plus, Trash2 } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
 import { useEffect, useState } from "react";
+import { AlertModal, ConfirmModal } from "@/components/Modal";
+import { useAlertModal, useConfirmModal } from "@/hooks/useModal";
 
 interface Tab5Props extends TabProps {
   bidangId?: number;
@@ -23,6 +25,10 @@ export default function Tab5LembarPengesahan({
 }: Tab5Props) {
   const [workflowSteps, setWorkflowSteps] = useState<any[]>([]);
   const [isLoadingWorkflow, setIsLoadingWorkflow] = useState(false);
+  
+  // Modal hooks
+  const alertModal = useAlertModal();
+  const confirmModal = useConfirmModal();
 
   // Fetch workflow steps when component mounts
   useEffect(() => {
@@ -150,13 +156,20 @@ export default function Tab5LembarPengesahan({
 
   const handleRefreshFromWorkflow = () => {
     if (workflowSteps.length === 0) {
-      alert("Data workflow belum tersedia. Pastikan bidang sudah dipilih.");
+      alertModal.showAlert(
+        "Data workflow belum tersedia. Pastikan bidang sudah dipilih.",
+        "warning"
+      );
       return;
     }
     
-    if (confirm("Refresh data penandatangan dari workflow? Data yang sudah diisi akan diganti.")) {
-      populateSignaturesFromWorkflow();
-    }
+    confirmModal.showConfirm(
+      "Refresh data penandatangan dari workflow? Data yang sudah diisi akan diganti.",
+      () => {
+        populateSignaturesFromWorkflow();
+      },
+      "warning"
+    );
   };
 
   const signatures = formData.approvalSignatures || [];
@@ -374,6 +387,21 @@ export default function Tab5LembarPengesahan({
           </div>
         </div>
       )}
+      
+      {/* Modals */}
+      <AlertModal
+        isOpen={alertModal.isOpen}
+        onClose={alertModal.close}
+        message={alertModal.alertMessage}
+        type={alertModal.alertType}
+      />
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={confirmModal.close}
+        onConfirm={confirmModal.confirmCallback || (() => {})}
+        message={confirmModal.confirmMessage}
+        type={confirmModal.confirmType}
+      />
     </div>
   );
 }

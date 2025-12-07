@@ -14,6 +14,7 @@ type UserFormProps = {
   initialData?: {
     id?: number;
     name: string;
+    username: string;
     email: string;
     positionId: number | null;
     isSuperAdmin: boolean;
@@ -24,6 +25,7 @@ type UserFormProps = {
 export default function UserForm({ mode, positions, initialData }: UserFormProps) {
   const router = useRouter();
   const [name, setName] = useState(initialData?.name ?? "");
+  const [username, setUsername] = useState(initialData?.username ?? "");
   const [email, setEmail] = useState(initialData?.email ?? "");
   const [password, setPassword] = useState("");
   const [positionId, setPositionId] = useState<number | "">(
@@ -44,14 +46,15 @@ export default function UserForm({ mode, positions, initialData }: UserFormProps
     setLoading(true);
 
     try {
-      if (!name || !email || !positionId) {
-        setError("Nama, email, dan jabatan wajib diisi.");
+      if (!name || !username || !email || !positionId) {
+        setError("Nama, username, email, dan jabatan wajib diisi.");
         setLoading(false);
         return;
       }
 
       const payload: any = {
         name,
+        username,
         email,
         positionId: Number(positionId),
         isSuperAdmin,
@@ -107,15 +110,29 @@ export default function UserForm({ mode, positions, initialData }: UserFormProps
             style={{ color: 'white' }}
           />
         </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="space-y-1">
+          <label className="text-xs text-gray-300">Username (untuk login)</label>
+          <input
+            type="text"
+            className="w-full rounded-md border border-[#42ff6b]/60 bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#42ff6b] focus:border-transparent"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="username"
+            style={{ color: 'white' }}
+          />
+        </div>
 
         <div className="space-y-1">
-          <label className="text-xs text-gray-300">Email</label>
+          <label className="text-xs text-gray-300">Email (untuk notifikasi)</label>
           <input
             type="email"
             className="w-full rounded-md border border-[#42ff6b]/60 bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#42ff6b] focus:border-transparent"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="email@perusahaan.co.id"
+            placeholder="email@plnindonesiapower.com"
             style={{ color: 'white' }}
           />
         </div>
