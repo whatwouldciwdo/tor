@@ -199,7 +199,7 @@ export default function Tab2Pendahuluan({ formData, onChange, isEditing = false 
       {/* Pendahuluan */}
 <TiptapEditor
   label="Pendahuluan"
-  content={formData.introduction}
+  content={formData.introduction || `<p>PT PLN Indonesia Power UBP Cilegon memiliki 2 unit PLTG dan 1 unit Turbin Uap, dengan total kapasitas pembangkit sebesar 740 MW. UBP Cilegon merupakan unit Mitsubishi dengan type M701F.</p>`}
   onChange={(html) => handleInputChange("introduction", html)}
   placeholder="Jelaskan pendahuluan pekerjaan ini..."
   readOnly={!isEditing}

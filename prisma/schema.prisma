@@ -226,6 +226,7 @@ model Tor {
   paymentTerms          String?          @db.Text
   penaltyRules          String?          @db.Text
   otherRequirements     String?          @db.Text
+  riskAssessment        String?          @db.Text // Risk Assessment
 
   // Budget (RAB)
   subtotal              Decimal?         @db.Decimal(15, 2)

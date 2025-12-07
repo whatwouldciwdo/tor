@@ -108,6 +108,7 @@ export async function POST(req: NextRequest) {
       paymentTerms,
       penaltyRules,
       otherRequirements,
+      riskAssessment, // Risk Assessment
       subtotal,
       ppn,
       pph,
@@ -185,6 +186,7 @@ export async function POST(req: NextRequest) {
         paymentTerms,
         penaltyRules,
         otherRequirements,
+        riskAssessment, // Risk Assessment
         subtotal,
         ppn,
         pph,

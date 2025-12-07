@@ -56,61 +56,104 @@ interface TiptapEditorProps {
   readOnly?: boolean;
 }
 
-// ✅ Custom Image extension with base64 paste/drop support AND interactive resize handles
-const CustomImage = Image.extend({
+// ✅ Custom Figure extension with caption support - users manually type full caption including numbering
+const CustomFigure = Image.extend({
+  name: 'figure',
+  
   addAttributes() {
     return {
       ...this.parent?.(),
-      width: {
+      src: {
         default: null,
-        parseHTML: element => element.getAttribute('width'),
+        parseHTML: element => {
+          const img = element.querySelector('img');
+          return img?.getAttribute('src') || null;
+        },
+      },
+      alt: {
+        default: null,
+        parseHTML: element => {
+          const img = element.querySelector('img');
+          return img?.getAttribute('alt') || null;
+        },
+      },
+      width: {
+        default: '600px',
+        parseHTML: element => {
+          const img = element.querySelector('img');
+          const width = img?.getAttribute('width') || img?.style.width;
+          return width || '600px';
+        },
         renderHTML: attributes => {
-          if (!attributes.width) return {}; 
+          if (!attributes.width) return {};
           return { width: attributes.width };
         },
       },
-      height: {
-        default: null,
-        parseHTML: element => element.getAttribute('height'),
-        renderHTML: attributes => {
-          if (!attributes.height) return {};
-          return { height: attributes.height };
+      caption: {
+        default: '',
+        parseHTML: element => {
+          const figcaption = element.querySelector('figcaption');
+          return figcaption?.textContent || '';
         },
-      },
-      style: {
-        default: null,
-        parseHTML: element => element.getAttribute('style'),
         renderHTML: attributes => {
-          if (!attributes.style) return {};
-          return { style: attributes.style };
+          return {};
         },
       },
     };
   },
 
+  parseHTML() {
+    return [
+      {
+        tag: 'figure.image-figure',
+      },
+      {
+        tag: 'figure',
+      },
+    ];
+  },
+
+  renderHTML({ node, HTMLAttributes }) {
+    const { src, alt, width, caption } = node.attrs;
+    
+    return [
+      'figure',
+      { class: 'image-figure', style: `max-width: 100%; margin: 1em 0;` },
+      [
+        'img',
+        {
+          src,
+          alt: alt || '',
+          style: `width: ${width}; max-width: 100%; height: auto; border-radius: 4px;`,
+        },
+      ],
+      caption
+        ? [
+            'figcaption',
+            {
+              class: 'image-caption',
+              style: 'text-align: center; font-style: italic; color: #666; font-size: 0.9em; margin-top: 0.5em;',
+            },
+            caption,
+          ]
+        : ['figcaption', { style: 'display: none;' }, ''],
+    ];
+  },
+
   addNodeView() {
     return ({ node, editor, getPos }) => {
+      const figure = document.createElement('figure');
+      figure.className = 'image-figure';
+      figure.style.cssText = 'max-width: 100%; margin: 1em 0; position: relative; display: inline-block;';
+      
       const container = document.createElement('div');
       container.className = 'image-resize-container';
       container.style.cssText = 'position: relative; display: inline-block; max-width: 100%;';
-      container.setAttribute('draggable', 'true'); // ✅ Enable drag and drop
       
       const img = document.createElement('img');
       img.src = node.attrs.src;
       img.alt = node.attrs.alt || '';
-      
-      // Set initial dimensions
-      if (node.attrs.width) {
-        img.style.width = typeof node.attrs.width === 'number' ? `${node.attrs.width}px` : node.attrs.width;
-      }
-      if (node.attrs.height) {
-        img.style.height = typeof node.attrs.height === 'number' ? `${node.attrs.height}px` : node.attrs.height;
-      }
-      
-      img.style.maxWidth = '100%';
-      img.style.height = 'auto';
-      img.style.cursor = 'pointer';
-      img.style.borderRadius = '4px';
+      img.style.cssText = `width: ${node.attrs.width}; max-width: 100%; height: auto; cursor: pointer; border-radius: 4px; display: block;`;
       
       container.appendChild(img);
       
@@ -132,6 +175,28 @@ const CustomImage = Image.extend({
         box-shadow: 0 1px 3px rgba(0,0,0,0.3);
       `;
       container.appendChild(resizeHandle);
+      
+      // Add figcaption
+      const figcaption = document.createElement('figcaption');
+      figcaption.className = 'image-caption';
+      figcaption.style.cssText = 'text-align: center; font-style: italic; color: #666; font-size: 0.9em; margin-top: 0.5em; cursor: pointer;';
+      figcaption.contentEditable = 'false';
+      
+      const updateCaption = () => {
+        if (node.attrs.caption) {
+          figcaption.textContent = node.attrs.caption;
+          figcaption.style.display = 'block';
+          figcaption.style.color = '#666';
+        } else {
+          figcaption.textContent = 'Klik untuk menambah keterangan...';
+          figcaption.style.display = 'block';
+          figcaption.style.color = '#ccc';
+        }
+      };
+      updateCaption();
+      
+      figure.appendChild(container);
+      figure.appendChild(figcaption);
       
       // Show/hide resize handle on hover
       container.addEventListener('mouseenter', () => {
@@ -163,7 +228,7 @@ const CustomImage = Image.extend({
           if (!isResizing) return;
           
           const deltaX = e.clientX - startX;
-          const newWidth = Math.max(100, Math.min(startWidth + deltaX, container.parentElement?.offsetWidth || 1000));
+          const newWidth = Math.max(100, Math.min(startWidth + deltaX, figure.parentElement?.offsetWidth || 1000));
           
           img.style.width = `${newWidth}px`;
         };
@@ -172,11 +237,10 @@ const CustomImage = Image.extend({
           if (!isResizing) return;
           isResizing = false;
           
-          // Update node attributes
           const newWidth = img.offsetWidth;
           const pos = getPos();
           if (typeof pos === 'number') {
-            editor.commands.updateAttributes('image', {
+            editor.commands.updateAttributes('figure', {
               width: `${newWidth}px`,
             });
           }
@@ -189,18 +253,36 @@ const CustomImage = Image.extend({
         document.addEventListener('mouseup', onMouseUp);
       });
       
+      // Click to edit caption
+      figcaption.addEventListener('click', (e) => {
+        if (!editor.isEditable) return;
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const newCaption = prompt(
+          'Masukkan keterangan gambar (contoh: "Gambar: 1. Deskripsi gambar"):',
+          node.attrs.caption || ''
+        );
+        
+        if (newCaption !== null) {
+          const pos = getPos();
+          if (typeof pos === 'number') {
+            editor.commands.updateAttributes('figure', {
+              caption: newCaption,
+            });
+          }
+        }
+      });
+      
       return {
-        dom: container,
+        dom: figure,
         update: (updatedNode) => {
-          if (updatedNode.type.name !== 'image') return false;
+          if (updatedNode.type.name !== 'figure') return false;
           
           img.src = updatedNode.attrs.src;
-          if (updatedNode.attrs.width) {
-            img.style.width = typeof updatedNode.attrs.width === 'number' ? `${updatedNode.attrs.width}px` : updatedNode.attrs.width;
-          }
-          if (updatedNode.attrs.height) {
-            img.style.height = typeof updatedNode.attrs.height === 'number' ? `${updatedNode.attrs.height}px` : updatedNode.attrs.height;
-          }
+          img.style.width = updatedNode.attrs.width;
+          node = updatedNode;
+          updateCaption();
           
           return true;
         },
@@ -869,7 +951,7 @@ export default function TiptapEditor({
         },
       }),
       // ✅ Use CustomImage instead of default Image
-      CustomImage.configure({
+      CustomFigure.configure({
         inline: true,
         allowBase64: true,
         HTMLAttributes: {
@@ -903,13 +985,31 @@ export default function TiptapEditor({
     }
   }, [editor, readOnly]);
 
-  // Sync content when prop changes (e.g. after data fetch)
+  // ✅ Sync content from prop, but ONLY when editor is not focused (prevent auto-undo)
   useEffect(() => {
-    if (editor && content && content !== editor.getHTML()) {
-      console.log('📥 Setting content from props, length:', content.length);
-      editor.commands.setContent(content);
+    if (!editor || editor.isFocused) return;
+    
+    const currentContent = editor.getHTML();
+    if (content !== currentContent) {
+      editor.commands.setContent(content || '');
     }
-  }, [editor, content]);
+  }, [content, editor]);
+
+  // Update content when editor changes
+  useEffect(() => {
+    if (!editor) return;
+
+    const handleUpdate = () => {
+      const html = editor.getHTML();
+      onChange(html);
+    };
+
+    editor.on('update', handleUpdate);
+
+    return () => {
+      editor.off('update', handleUpdate);
+    };
+  }, [editor, onChange]);
 
 
   return (

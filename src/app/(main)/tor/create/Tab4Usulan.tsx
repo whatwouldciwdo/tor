@@ -17,7 +17,7 @@ export default function Tab4Usulan({ formData, onChange, isEditing = false }: Ta
     const current = formData.directorProposals || [];
     const newProposal: DirectorProposal = {
       id: uuidv4(),
-      name: "",
+      name: "Senior Manager Unit", // Default value
     };
     handleInputChange("directorProposals", [...current, newProposal]);
   };
@@ -177,7 +177,17 @@ export default function Tab4Usulan({ formData, onChange, isEditing = false }: Ta
       {/* Persyaratan Calon Penyedia - TiptapEditor */}
       <TiptapEditor
         label="Persyaratan Calon Penyedia"
-        content={formData.vendorRequirements}
+        content={formData.vendorRequirements || `<ol style="list-style-type: lower-alpha;">
+<li>Izin Usaha: Non Kecil</li>
+<li>Klasifikasi Usaha/Kelompok Usaha/Bidang Usaha: Berpengalaman dalam Pengelolaan Infrastruktur di lingkungan PT PLN Indonesia Power.</li>
+<li>Minimal memiliki 1 orang Project Enjinir yang berpengalaman dalam Pengelolaan Infrastruktur.</li>
+<li>Commissioner/Project Enjinir WAJIB mengetahui proses pekerjaan di lapangan dan bertanggung jawab langsung terhadap Direksi Pekerjaan/Lapangan/Mutu atas progress report setiap harinya.</li>
+<li>Penyedia barang dan jasa WAJIB membawa seluruh sertifikat personil, yang berkaitan dengan pekerjaan tersebut dan menunjukannya ke Direksi Pekerjaan/Direksi Lapangan/Tim Mutu minimal 1 hari sebelum eksekusi pekerjaan. Khusus untuk pekerjaan di bawah air, untuk personil yang akan melaksanakan pekerjaan tersebut wajib memiliki sertifikat menyelam atau bekerja di dalam air atau sejenisnya yang berkaitan dengan pekerjaan tersebut dan berusia maksimal 55 tahun.</li>
+<li>Penyedia barang dan jasa WAJIB memiliki Pengawas K3 yang memiliki sertifikat yang masih berlaku</li>
+<li>Memiliki sertifikat SIUJK dan masih berlaku</li>
+<li>Memiliki sertifikat PQ CSMS dari PT PLN Indonesia Power dengan kualifikasi tingkat risiko minimum EKSTRIM</li>
+<li>Penyedia Barang dan Jasa WAJIB memberikan technical support after sales jika kemudian hari setelah pemasangan terdapat kendala teknis dalam pengoperasian.</li>
+</ol>`}
         onChange={(html) => handleInputChange("vendorRequirements", html)}
         placeholder="Persyaratan izin usaha, klasifikasi, sertifikat, dll..."
         readOnly={!isEditing}
@@ -195,7 +205,10 @@ export default function Tab4Usulan({ formData, onChange, isEditing = false }: Ta
       {/* Usulan Aturan Pembayaran - TiptapEditor */}
       <TiptapEditor
         label="Usulan Aturan Pembayaran"
-        content={formData.paymentTerms}
+        content={formData.paymentTerms || `<ol style="list-style-type: lower-alpha;">
+<li>Pembayaran dilakukan dengan mata uang rupiah sesuai aturan pengadaan Barang dan Jasa PT PLN Indonesia Power UBP Cilegon.</li>
+<li>Persyaratan hak atas pembayaran: Telah diserah terimakannya seluruh pekerjaan berdasarkan kontrak</li>
+</ol>`}
         onChange={(html) => handleInputChange("paymentTerms", html)}
         placeholder="Aturan pembayaran, mata uang, persyaratan..."
         readOnly={!isEditing}
@@ -204,7 +217,12 @@ export default function Tab4Usulan({ formData, onChange, isEditing = false }: Ta
       {/* Usulan Aturan Denda - TiptapEditor */}
       <TiptapEditor
         label="Usulan Aturan Denda"
-        content={formData.penaltyRules}
+        content={formData.penaltyRules || `<p>Denda keterlambatan diberlakukan apabila Penyedia mengirimkan barang melebihi waktu yang dipersyaratkan, dengan besaran:</p>
+<ol style="list-style-type: lower-alpha;">
+<li>Denda sebesar 1‰ (satu per mil) x hari keterlambatan x jumlah barang yang dipersyaratkan dalam kontrak x nilai total kontrak</li>
+<li>Batasan denda maksimal sebesar 5% dari Nilai Surat Perjanjian</li>
+</ol>
+<p>Tidak ada denda atas kualitas. Kualitas material/pekerjaan mengacu pada standar spesifikasi kontrak. Jika terdapat material/pekerjaan dibawah standar spesifikasi maka direksi lapangan berhak menolak material tersebut. Apabila terjadi penolakan maka penyedia wajib menyediakan pengganti sesuai kontrak. Denda keterlambatan mengacu pada tanggal delivery yang dipersyaratkan dalam kontrak.</p>`}
         onChange={(html) => handleInputChange("penaltyRules", html)}
         placeholder="Denda keterlambatan, batasan maksimal, dll..."
         readOnly={!isEditing}
@@ -224,6 +242,15 @@ export default function Tab4Usulan({ formData, onChange, isEditing = false }: Ta
         content={formData.otherRequirements}
         onChange={(html) => handleInputChange("otherRequirements", html)}
         placeholder="Persyaratan tambahan lainnya..."
+        readOnly={!isEditing}
+      />
+
+      {/* Risk Assessment - TiptapEditor */}
+      <TiptapEditor
+        label="Risk Assessment"
+        content={formData.riskAssessment}
+        onChange={(html) => handleInputChange("riskAssessment", html)}
+        placeholder="Jelaskan risk assessment untuk pekerjaan ini..."
         readOnly={!isEditing}
       />
     </div>

@@ -324,7 +324,8 @@ function parseHtmlToParagraphs(html: string | null): Array<Paragraph | Table> {
     index: number; 
     length: number; 
     match: RegExpExecArray | null; 
-    content?: string 
+    content?: string;
+    caption?: string;
   }> = [];
   
   // Find all <p> tags
@@ -363,17 +364,47 @@ function parseHtmlToParagraphs(html: string | null): Array<Paragraph | Table> {
     });
   }
   
-  // Find all <img> tags
+  // Find all <figure> tags (with captions)
+  const figureRegex = /<figure[^>]*>([\s\S]*?)<\/figure>/gi;
+  let figureMatch;
+  while ((figureMatch = figureRegex.exec(html)) !== null) {
+    const figureContent = figureMatch[1];
+    // Extract img and figcaption from figure
+    const imgInFigure = figureContent.match(/<img[^>]*>/i);
+    const figcaption = figureContent.match(/<figcaption[^>]*>([\s\S]*?)<\/figcaption>/i);
+    
+    if (imgInFigure) {
+      elements.push({ 
+        type: 'figure', 
+        index: figureMatch.index, 
+        length: figureMatch[0].length,
+        match: null,
+        content: imgInFigure[0],
+        caption: figcaption ? figcaption[1] : undefined
+      });
+    }
+  }
+  
+  // Find standalone <img> tags (without figure wrapper)
   const imgRegex = /<img[^>]*>/gi;
   let imgMatch;
   while ((imgMatch = imgRegex.exec(html)) !== null) {
-    elements.push({ 
-      type: 'img', 
-      index: imgMatch.index, 
-      length: imgMatch[0].length,
-      match: null,
-      content: imgMatch[0]
-    });
+    // Check if this img is inside a figure tag (already processed)
+    const isInFigure = elements.some(el => 
+      el.type === 'figure' && 
+      imgMatch.index >= el.index && 
+      imgMatch.index < el.index + el.length
+    );
+    
+    if (!isInFigure) {
+      elements.push({ 
+        type: 'img', 
+        index: imgMatch.index, 
+        length: imgMatch[0].length,
+        match: null,
+        content: imgMatch[0]
+      });
+    }
   }
   
   // Find all <table> tags
@@ -494,13 +525,44 @@ function parseHtmlToParagraphs(html: string | null): Array<Paragraph | Table> {
       });
       
     } else if (element.type === 'img') {
-      // Images should NEVER be skipped
+      // Standalone images (without caption) should NEVER be skipped
       console.log(`${idx + 1}. 🖼️ Image element`);
       
       const imageParagraph = processImage(element.content!);
       paragraphs.push(imageParagraph);
       
       // Don't add to processedRanges - images are standalone
+      
+    } else if (element.type === 'figure') {
+      // Figure with caption
+      console.log(`${idx + 1}. 🖼️ Figure with caption`);
+      
+      // Process image
+      const imageParagraph = processImage(element.content!);
+      paragraphs.push(imageParagraph);
+      
+      // Process caption if exists
+      if (element.caption) {
+        const captionText = cleanHtml(element.caption);
+        if (captionText) {
+          paragraphs.push(new Paragraph({
+            children: [
+              new TextRun({
+                text: captionText,
+                font: "Arial",
+                size: 18, // Slightly smaller than body text
+                italics: true,
+                color: "666666",
+              })
+            ],
+            alignment: AlignmentType.CENTER,
+            spacing: { after: 200 },
+          }));
+          console.log(`   📝 Caption: ${captionText}`);
+        }
+      }
+      
+      // Don't add to processedRanges - figures are standalone
       
     } else if (element.type === 'table') {
       // Tables should NEVER be skipped
@@ -1419,7 +1481,7 @@ export async function GET(
                               children: [
                                 new ImageRun({
                                   data: plnLogoBuffer,
-                                  transformation: { width: 80, height: 40 },
+                                  transformation: { width: 136, height: 40 },
                                   type: "jpg",
                                 }),
                               ],
@@ -1448,7 +1510,7 @@ export async function GET(
                               children: [
                                 new ImageRun({
                                   data: secondaryLogoBuffer,
-                                  transformation: { width: 20, height: 28 },
+                                  transformation: { width: 29, height: 41 },
                                   type: "png",
                                 }),
                               ],
@@ -1926,6 +1988,20 @@ new Paragraph({
 }),
 ...parseHtmlToParagraphs(tor.otherRequirements),
 
+// ✅ 18. RISK ASSESSMENT
+new Paragraph({
+  children: [
+    new TextRun({
+      text: "18. RISK ASSESSMENT",
+      font: "Arial",
+      size: 20,
+      bold: true,
+    }),
+  ],
+  spacing: { before: 200, after: 100 },
+}),
+...parseHtmlToParagraphs(tor.riskAssessment),
+
 
 
             // Parse directorProposals and fieldDirectorProposals
@@ -2006,7 +2082,7 @@ new Paragraph({
                   width: { size: 100, type: WidthType.PERCENTAGE },
                   borders: {
                     top: { style: BorderStyle.NONE },
-                    bottom: { style: BorderStyle.NONE },
+                    bottom: { style: BorderStyle.SINGLE, size: 6 },
                     left: { style: BorderStyle.NONE },
                     right: { style: BorderStyle.NONE },
                     insideVertical: { style: BorderStyle.NONE },
@@ -2015,24 +2091,20 @@ new Paragraph({
                   rows: [
                     new TableRow({
                       children: [
+                        // Left: Logo + Text
                         new TableCell({
-                          width: { size: 20, type: WidthType.PERCENTAGE },
+                          width: { size: 80, type: WidthType.PERCENTAGE },
                           children: [
                             plnLogoBuffer ? new Paragraph({
                               children: [
                                 new ImageRun({
                                   data: plnLogoBuffer,
-                                  transformation: { width: 80, height: 40 },
+                                  transformation: { width: 136, height: 40 },
                                   type: "jpg",
                                 }),
                               ],
                               alignment: AlignmentType.LEFT,
                             }) : new Paragraph(""),
-                          ],
-                        }),
-                        new TableCell({
-                          width: { size: 60, type: WidthType.PERCENTAGE },
-                          children: [
                             new Paragraph({
                               children: [
                                 new TextRun({
@@ -2042,11 +2114,13 @@ new Paragraph({
                                   italics: true,
                                 }),
                               ],
-                              alignment: AlignmentType.CENTER,
+                              alignment: AlignmentType.LEFT,
+                              spacing: { before: 100 },
                             }),
                           ],
                           verticalAlign: VerticalAlign.CENTER,
                         }),
+                        // Right: Secondary Logo
                         new TableCell({
                           width: { size: 20, type: WidthType.PERCENTAGE },
                           children: [
@@ -2054,13 +2128,14 @@ new Paragraph({
                               children: [
                                 new ImageRun({
                                   data: secondaryLogoBuffer,
-                                  transformation: { width: 20, height: 28 },
+                                  transformation: { width: 29, height: 41 },
                                   type: "png",
                                 }),
                               ],
                               alignment: AlignmentType.RIGHT,
                             }) : new Paragraph(""),
                           ],
+                          verticalAlign: VerticalAlign.CENTER,
                         }),
                       ],
                     }),

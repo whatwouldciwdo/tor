@@ -40,7 +40,11 @@ export default function Tab3TahapanPekerjaan({ formData, onChange, isEditing = f
       {/* Persyaratan Pengiriman */}
       <TiptapEditor
         label="Persyaratan Pengiriman"
-        content={formData.deliveryRequirements}
+        content={formData.deliveryRequirements || `<ol>
+<li>Penyedia wajib mengirimkan barang dan mengkondisikan pengiriman barang menjamin barang terhindar dari kerusakan.</li>
+<li>Pelaksana pekerjaan berkewajiban atas asuransi kargo dari tempat asal barang sampai dengan titik serah terima.</li>
+<li>Apabila terdapat Pengepakan harus terdapat packing list setiap barang.</li>
+</ol>`}
         onChange={(html) => handleInputChange("deliveryRequirements", html)}
         placeholder="Jelaskan persyaratan pengiriman hasil pekerjaan..."
         readOnly={!isEditing}
@@ -49,7 +53,9 @@ export default function Tab3TahapanPekerjaan({ formData, onChange, isEditing = f
       {/* Titik Serah Terima */}
       <TiptapEditor
         label="Titik Serah Terima"
-        content={formData.handoverPoint}
+        content={formData.handoverPoint || `<p><strong>Titik serah terima pekerjaan adalah:</strong></p>
+<p>PT PLN Indonesia Power UBP Cilegon:<br>
+Jl. Raya Bojonegara - Salira, Desa Margasari Kecamatan Puloampel, Kab. Serang - Banten (0254) 5751555, 5751444 setiap hari kerja mulai pukul 08:00 s/d pukul 15:00.</p>`}
         onChange={(html) => handleInputChange("handoverPoint", html)}
         placeholder="Jelaskan titik/lokasi serah terima hasil pekerjaan..."
         readOnly={!isEditing}

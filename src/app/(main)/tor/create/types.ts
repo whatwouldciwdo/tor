@@ -104,6 +104,7 @@ export interface TorFormData {
   paymentTerms?: string; // TiptapEditor HTML
   penaltyRules?: string; // TiptapEditor HTML
   otherRequirements?: string; // TiptapEditor HTML
+  riskAssessment?: string; // TiptapEditor HTML - Risk Assessment
   subtotal?: number;
   ppn?: number;
   ppnRate?: number; // PPN percentage (e.g., 11 for 11%)

@@ -166,6 +166,7 @@ export async function PUT(req: NextRequest, context: RouteContext) {
       paymentTerms,
       penaltyRules,
       otherRequirements,
+      riskAssessment, // Risk Assessment
       subtotal,
       ppn,
       pph,
@@ -230,6 +231,7 @@ export async function PUT(req: NextRequest, context: RouteContext) {
         paymentTerms,
         penaltyRules,
         otherRequirements,
+        riskAssessment, // Risk Assessment
         subtotal,
         ppn,
         pph,
