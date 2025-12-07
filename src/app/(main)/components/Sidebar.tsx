@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import Image from "next/image";
 import { Plus, Search, LogOut, Shield, FileText } from "lucide-react";
 import ProfileModal from "@/components/ProfileModal";
 
@@ -117,21 +118,34 @@ export default function Sidebar({
   return (
     <>
     <aside className="fixed left-0 top-0 h-screen w-24 bg-[#1f1f1f] border-r border-[#42ff6b] flex flex-col items-center justify-between py-8 flex-shrink-0 overflow-y-auto z-50">
-      {/* Avatar */}
-      <div className="flex flex-col items-center gap-4">
-        {pathname === "/tor" ? (
-          <button
-            onClick={() => setShowProfileModal(true)}
-            className="w-14 h-14 rounded-full bg-[#42ff6b] flex items-center justify-center text-black font-semibold text-lg hover:bg-[#38e05c] hover:scale-110 transition-all duration-300 cursor-pointer shadow-lg hover:shadow-[#42ff6b]/50"
-            title="Profile Settings"
-          >
-            {initials}
-          </button>
-        ) : (
-          <div className="w-14 h-14 rounded-full bg-[#42ff6b] flex items-center justify-center text-black font-semibold text-lg">
-            {initials}
-          </div>
-        )}
+      {/* Logo */}
+      <div className="flex flex-col items-center gap-6 w-full">
+        <div className="w-16 h-16">
+          <Image
+            src="/pln-tos-logo.jpg"
+            alt="TOS Logo"
+            width={64}
+            height={64}
+            className="object-contain"
+          />
+        </div>
+        
+        {/* Avatar */}
+        <div className="flex flex-col items-center">
+          {pathname === "/tor" ? (
+            <button
+              onClick={() => setShowProfileModal(true)}
+              className="w-14 h-14 rounded-full bg-[#42ff6b] flex items-center justify-center text-black font-semibold text-lg hover:bg-[#38e05c] hover:scale-110 transition-all duration-300 cursor-pointer shadow-lg hover:shadow-[#42ff6b]/50"
+              title="Profile Settings"
+            >
+              {initials}
+            </button>
+          ) : (
+            <div className="w-14 h-14 rounded-full bg-[#42ff6b] flex items-center justify-center text-black font-semibold text-lg">
+              {initials}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Menu Items */}

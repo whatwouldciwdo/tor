@@ -73,7 +73,7 @@ export default function LoginPage() {
             </div>
             
             <h1 className="text-4xl md:text-5xl font-serif font-semibold">
-              [TOS] Tor Online System
+              Tor Online System
             </h1>
             <p className="mt-3 text-lg text-gray-300">
               Let&apos;s log you in quickly
