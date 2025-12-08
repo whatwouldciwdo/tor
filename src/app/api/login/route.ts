@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { prisma, withRetry } from "@/lib/prisma";
+import { handlePrismaError, errorResponse } from "@/lib/api-response";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
@@ -12,39 +13,33 @@ export async function POST(req: NextRequest) {
     const { username, password } = body as { username?: string; password?: string };
 
     if (!username || !password) {
-      return NextResponse.json(
-        { message: "Username dan password wajib diisi" },
-        { status: 400 }
-      );
+      return errorResponse("Username dan password wajib diisi", 400, "MISSING_FIELDS");
     }
 
-    const user = await prisma.user.findUnique({
-      where: { username },
-      include: {
-        position: {
-          include: {
-            bidang: true,
-            positionRoles: {
-              include: { role: true },
+    // Use retry logic for database query
+    const user = await withRetry(async () => {
+      return await prisma.user.findUnique({
+        where: { username },
+        include: {
+          position: {
+            include: {
+              bidang: true,
+              positionRoles: {
+                include: { role: true },
+              },
             },
           },
         },
-      },
+      });
     });
 
     if (!user || !user.isActive) {
-      return NextResponse.json(
-        { message: "Username atau password tidak valid" },
-        { status: 401 }
-      );
+      return errorResponse("Username atau password tidak valid", 401, "INVALID_CREDENTIALS");
     }
 
     const passwordOk = await bcrypt.compare(password, user.passwordHash);
     if (!passwordOk) {
-      return NextResponse.json(
-        { message: "Username atau password tidak valid" },
-        { status: 401 }
-      );
+      return errorResponse("Username atau password tidak valid", 401, "INVALID_CREDENTIALS");
     }
 
     // Buat token (keep email for notifications)
@@ -68,15 +63,22 @@ export async function POST(req: NextRequest) {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       maxAge: 60 * 60 * 24, // 1 hari
+      sameSite: "lax",
       path: "/",
     });
 
     return res;
-  } catch (err) {
-    console.error(err);
-    return NextResponse.json(
-      { message: "Terjadi kesalahan saat login" },
-      { status: 500 }
+  } catch (err: any) {
+    // Check if it's a Prisma error
+    if (err.code && err.code.startsWith('P')) {
+      return handlePrismaError(err);
+    }
+
+    console.error('Login error:', err.message);
+    return errorResponse(
+      "Terjadi kesalahan saat login. Silakan coba lagi.",
+      500,
+      "INTERNAL_ERROR"
     );
   }
 }

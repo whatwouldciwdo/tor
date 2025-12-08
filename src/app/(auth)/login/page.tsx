@@ -72,7 +72,7 @@ export default function LoginPage() {
               />
             </div>
             
-            <h1 className="text-4xl md:text-5xl font-serif font-semibold">
+            <h1 className="text-4xl md:text-5xl font-serif font-semibold bg-gradient-to-r from-white via-[#42ff6b] to-white bg-clip-text text-transparent animate-gradient bg-[length:200%_auto]">
               Tor Online System
             </h1>
             <p className="mt-3 text-lg text-gray-300">

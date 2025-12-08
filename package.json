@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:seed-test": "node prisma/seed-test-users.cjs",
+    "test:load": "node scripts/load-test.js",
+    "test:load:login": "node scripts/load-test.js --scenario=login",
+    "test:load:create": "node scripts/load-test.js --scenario=create"
   },
   "dependencies": {
     "@prisma/client": "^6.19.0",

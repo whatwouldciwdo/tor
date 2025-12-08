@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { prisma, withRetry } from "@/lib/prisma";
+import { handlePrismaError, errorResponse, successResponse } from "@/lib/api-response";
 import { cookies } from "next/headers";
 import jwt from "jsonwebtoken";
 
@@ -56,10 +57,6 @@ export async function POST(req: NextRequest) {
   try {
     const user = await getCurrentUser(req);
     const body = await req.json();
-
-    console.log("📝 Creating new TOR");
-    console.log("   - Title:", body.title);
-    console.log("   - coverImage:", body.coverImage);
 
     const {
       title,
@@ -126,117 +123,118 @@ export async function POST(req: NextRequest) {
     const finalBidangId = bidangId || user.position?.bidangId;
 
     if (!finalBidangId) {
-      return NextResponse.json(
-        { message: "Bidang is required" },
-        { status: 400 }
-      );
+      return errorResponse("Bidang is required", 400, "MISSING_BIDANG");
     }
 
     const now = new Date();
-    const torNumber = generateTorNumber(title, now);
-
-    // Create ToR with all fields
-    const tor = await prisma.tor.create({
-      data: {
-        number: torNumber,
-        title,
-        description,
-        bidangId: finalBidangId,
-        creatorUserId: user.id,
-        coverImage,
-        // Tab 1
-        creationDate: creationDate ? new Date(creationDate) : now,
-        creationYear: creationYear || now.getFullYear(),
-        budgetType,
-        workType,
-        program,
-        rkaYear,
-        projectStartDate: projectStartDate ? new Date(projectStartDate) : null,
-        projectEndDate: projectEndDate ? new Date(projectEndDate) : null,
-        executionYear,
-        materialJasaValue,
-        budgetCurrency,
-        budgetAmount,
-        // Tab 2
-        introduction,
-        background,
-        objective,
-        scope,
-        warranty,
-        acceptanceCriteria,
-        // Tab 3
-        duration,
-        durationUnit,
-        technicalSpec,
-        generalProvisions,
-        deliveryPoint,
-        deliveryMechanism,
-        workStagesData: workStages || null,
-        workStagesExplanation,
-        deliveryRequirements,
-        handoverPoint,
-        handoverMechanism,
-        // Tab 4
-        directorProposal, // Keep for backward compatibility
-        fieldDirectorProposal, // Keep for backward compatibility
-        directorProposals: directorProposals || null, // ✅ NEW: Save Json array
-        fieldDirectorProposals: fieldDirectorProposals || null, // ✅ NEW: Save Json array
-        vendorRequirements,
-        procurementMethod,
-        paymentTerms,
-        penaltyRules,
-        otherRequirements,
-        riskAssessment, // Risk Assessment
-        subtotal,
-        ppn,
-        pph,
-        grandTotal,
-        // Tab 6
-        technicalParticulars,
-        inspectionTestingPlans,
-        documentRequestSheets,
-        performanceGuarantees,
-        // Budget items
-        budgetItems: budgetItems
-          ? {
-              create: budgetItems.map((item: any, index: number) => ({
-                item: item.item,
-                description: item.description,
-                quantity: item.quantity,
-                unit: item.unit,
-                unitPrice: item.unitPrice,
-                totalPrice: item.totalPrice,
-                orderIndex: index,
-              })),
-            }
-          : undefined,
-      },
-      include: {
-        bidang: true,
-        creator: {
-          include: {
-            position: true,
+    
+    // Create ToR with retry logic for unique constraint conflicts
+    // This handles concurrent creation attempts
+    const tor = await withRetry(async () => {
+      const torNumber = generateTorNumber(title, new Date());
+      
+      // Use transaction to ensure atomicity
+      return await prisma.tor.create({
+        data: {
+          number: torNumber,
+          title,
+          description,
+          bidangId: finalBidangId,
+          creatorUserId: user.id,
+          coverImage,
+          // Tab 1
+          creationDate: creationDate ? new Date(creationDate) : now,
+          creationYear: creationYear || now.getFullYear(),
+          budgetType,
+          workType,
+          program,
+          rkaYear,
+          projectStartDate: projectStartDate ? new Date(projectStartDate) : null,
+          projectEndDate: projectEndDate ? new Date(projectEndDate) : null,
+          executionYear,
+          materialJasaValue,
+          budgetCurrency,
+          budgetAmount,
+          // Tab 2
+          introduction,
+          background,
+          objective,
+          scope,
+          warranty,
+          acceptanceCriteria,
+          // Tab 3
+          duration,
+          durationUnit,
+          technicalSpec,
+          generalProvisions,
+          deliveryPoint,
+          deliveryMechanism,
+          workStagesData: workStages || null,
+          workStagesExplanation,
+          deliveryRequirements,
+          handoverPoint,
+          handoverMechanism,
+          // Tab 4
+          directorProposal,
+          fieldDirectorProposal,
+          directorProposals: directorProposals || null,
+          fieldDirectorProposals: fieldDirectorProposals || null,
+          vendorRequirements,
+          procurementMethod,
+          paymentTerms,
+          penaltyRules,
+          otherRequirements,
+          riskAssessment,
+          subtotal,
+          ppn,
+          pph,
+          grandTotal,
+          // Tab 6
+          technicalParticulars,
+          inspectionTestingPlans,
+          documentRequestSheets,
+          performanceGuarantees,
+          // Budget items
+          budgetItems: budgetItems
+            ? {
+                create: budgetItems.map((item: any, index: number) => ({
+                  item: item.item,
+                  description: item.description,
+                  quantity: item.quantity,
+                  unit: item.unit,
+                  unitPrice: item.unitPrice,
+                  totalPrice: item.totalPrice,
+                  orderIndex: index,
+                })),
+              }
+            : undefined,
+        },
+        include: {
+          bidang: true,
+          creator: {
+            include: {
+              position: true,
+            },
+          },
+          budgetItems: {
+            orderBy: { orderIndex: "asc" },
           },
         },
-        budgetItems: {
-          orderBy: { orderIndex: "asc" },
-        },
-      },
+      });
     });
-
-    console.log("✅ TOR created successfully!");
-    console.log("   - ID:", tor.id);
-    console.log("   - Number:", tor.number);
-    console.log("   - coverImage:", tor.coverImage);
-    console.log("   - directorProposals:", tor.directorProposals);
-    console.log("   - fieldDirectorProposals:", tor.fieldDirectorProposals);
 
     return NextResponse.json(tor, { status: 201 });
   } catch (error: any) {
-    console.error("❌ Error creating ToR:", error);
-    return NextResponse.json(
-      { message: error.message || "Failed to create ToR" },
-      { status: 500 }
+    // Handle Prisma errors
+    if (error.code && error.code.startsWith('P')) {
+      return handlePrismaError(error);
+    }
+
+    console.error('TOR creation error:', error.message);
+    return errorResponse(
+      "Gagal membuat TOR. Silakan coba lagi.",
+      500,
+      "CREATION_FAILED"
     );
   }
 }
