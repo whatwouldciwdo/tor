@@ -2,15 +2,17 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle, XCircle, AlertCircle, Send } from "lucide-react";
+import { CheckCircle, XCircle, AlertCircle, Send, Download } from "lucide-react";
 import { ConfirmModal } from "@/components/Modal";
 import { useConfirmModal } from "@/hooks/useModal";
+import { saveAs } from "file-saver";
 
 type Props = {
   torId: string;
   status: string;
   canSubmit: boolean;
   canApprove: boolean;
+  canExport?: boolean;
 };
 
 export default function TorDetailClient({
@@ -18,9 +20,10 @@ export default function TorDetailClient({
   status,
   canSubmit,
   canApprove,
+  canExport = false,
 }: Props) {
   const router = useRouter();
-  const [loading, setLoading] = useState<null | "submit" | "approve" | "revise" | "reject">(null);
+  const [loading, setLoading] = useState<null | "submit" | "approve" | "revise" | "reject" | "export">(null);
   const [error, setError] = useState<string | null>(null);
   const [actionNote, setActionNote] = useState("");
   const [showNoteModal, setShowNoteModal] = useState<"revise" | "reject" | null>(null);
@@ -117,6 +120,36 @@ export default function TorDetailClient({
     }
   }
 
+  async function handleExport() {
+    try {
+      setLoading("export");
+      setError(null);
+
+      const response = await fetch(`/api/tor/${torId}/export`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to export TOR');
+      }
+      
+      const blob = await response.blob();
+      
+      let filename = `TOR-${torId}.docx`;
+      const disposition = response.headers.get('Content-Disposition');
+      if (disposition) {
+        const match = disposition.match(/filename\s*=\s*"?([^";]+)"?/i);
+        if (match && match[1]) {
+          filename = match[1];
+        }
+      }
+      
+      saveAs(blob, filename);
+    } catch (err: any) {
+      setError(err.message || 'Gagal export TOR');
+    } finally {
+      setLoading(null);
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-3">
@@ -160,6 +193,17 @@ export default function TorDetailClient({
               Tolak
             </button>
           </>
+        )}
+
+        {canExport && (
+          <button
+            onClick={handleExport}
+            disabled={loading !== null}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-medium transition-colors"
+          >
+            <Download size={18} />
+            {loading === "export" ? "Exporting..." : "Export to Word"}
+          </button>
         )}
       </div>
 

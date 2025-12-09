@@ -938,6 +938,218 @@ async function main() {
 
   console.log("✅ Cross-Bidang Access seeded successfully!\n");
 
+  // 7. Lampiran Templates
+  console.log("Seeding Lampiran Templates...");
+
+  const templates = [
+    {
+      name: "Arrester",
+      description: "Lightning Arrester Template",
+      technicalParticulars: [
+        { id: "1", specification: "Rated Voltage", ownerRequest: "20 kV", vendorProposed: "" },
+        { id: "2", specification: "Lightning Impulse Protection Level", ownerRequest: "≤ 75 kV", vendorProposed: "" },
+        { id: "3", specification: "Switching Impulse Protection Level", ownerRequest: "≤ 60 kV", vendorProposed: "" },
+        { id: "4", specification: "Nominal Discharge Current", ownerRequest: "10 kA", vendorProposed: "" },
+      ],
+      inspectionTestingPlans: [
+        { id: "1", testingItem: "Visual Inspection", testingMethod: "Visual", standardTestReference: "IEC 60099-4", testedBy: "Vendor", witnessBy: "Owner", acceptanceCriteria: "No visible damage" },
+        { id: "2", testingItem: "High Voltage Test", testingMethod: "Applied Voltage", standardTestReference: "IEC 60099-4", testedBy: "Lab", witnessBy: "Owner", acceptanceCriteria: "Pass without flashover" },
+      ],
+      documentRequestSheets: [
+        { id: "1", documentRequirement: "Test Certificate", documentType: "Original" },
+        { id: "2", documentRequirement: "Operation Manual", documentType: "Hardcopy & Softcopy" },
+      ],
+      performanceGuarantees: [
+        { id: "1", plantItem: "Arrester", performanceParameter: "Protection Level", baselineParameter: "≤ 75 kV", verificationMethod: "Factory Test", remedialMeasure: "Replacement" },
+      ],
+    },
+    {
+      name: "AVR",
+      description: "Automatic Voltage Regulator Template",
+      technicalParticulars: [
+        { id: "1", specification: "Input Voltage Range", ownerRequest: "380-480 VAC", vendorProposed: "" },
+        { id: "2", specification: "Output Voltage", ownerRequest: "400 VAC ± 1%", vendorProposed: "" },
+        { id: "3", specification: "Frequency", ownerRequest: "50/60 Hz", vendorProposed: "" },
+        { id: "4", specification: "Response Time", ownerRequest: "< 40 ms", vendorProposed: "" },
+      ],
+      inspectionTestingPlans: [
+        { id: "1", testingItem: "Voltage Regulation Test", testingMethod: "Input Variation", standardTestReference: "IEC 62040", testedBy: "Vendor", witnessBy: "Owner", acceptanceCriteria: "±1% accuracy" },
+        { id: "2", testingItem: "Load Test", testingMethod: "Full Load", standardTestReference: "IEC 62040", testedBy: "Vendor", witnessBy: "Owner", acceptanceCriteria: "Stable output" },
+      ],
+      documentRequestSheets: [
+        { id: "1", documentRequirement: "Test Report", documentType: "Original" },
+        { id: "2", documentRequirement: "Wiring Diagram", documentType: "As-Built" },
+      ],
+      performanceGuarantees: [
+        { id: "1", plantItem: "AVR", performanceParameter: "Voltage Accuracy", baselineParameter: "±1%", verificationMethod: "Load Test", remedialMeasure: "Calibration/Replacement" },
+      ],
+    },
+    {
+      name: "Battery",
+      description: "Battery System Template",
+      technicalParticulars: [
+        { id: "1", specification: "Type", ownerRequest: "VRLA/Flooded", vendorProposed: "" },
+        { id: "2", specification: "Nominal Voltage", ownerRequest: "110 VDC", vendorProposed: "" },
+        { id: "3", specification: "Capacity", ownerRequest: "200 Ah @ 8hr rate", vendorProposed: "" },
+        { id: "4", specification: "Design Life", ownerRequest: "≥ 10 years", vendorProposed: "" },
+      ],
+      inspectionTestingPlans: [
+        { id: "1", testingItem: "Capacity Test", testingMethod: "Discharge Test", standardTestReference: "IEEE 450", testedBy: "Vendor", witnessBy: "Owner", acceptanceCriteria: "≥ 100% rated capacity" },
+        { id: "2", testingItem: "Internal Resistance", testingMethod: "Ohmic Test", standardTestReference: "IEEE 1188", testedBy: "Vendor", witnessBy: "Owner", acceptanceCriteria: "Within spec" },
+      ],
+      documentRequestSheets: [
+        { id: "1", documentRequirement: "Capacity Test Report", documentType: "Original" },
+        { id: "2", documentRequirement: "Maintenance Manual", documentType: "Hardcopy" },
+      ],
+      performanceGuarantees: [
+        { id: "1", plantItem: "Battery", performanceParameter: "Backup Time", baselineParameter: "8 hours @ rated load", verificationMethod: "Discharge Test", remedialMeasure: "Cell Replacement" },
+      ],
+    },
+    {
+      name: "MTU Peralatan Tegangan Tinggi",
+      description: "High Voltage Equipment Template",
+      technicalParticulars: [
+        { id: "1", specification: "Rated Voltage", ownerRequest: "150 kV", vendorProposed: "" },
+        { id: "2", specification: "BIL", ownerRequest: "650 kV", vendorProposed: "" },
+        { id: "3", specification: "Rated Current", ownerRequest: "1250 A", vendorProposed: "" },
+        { id: "4", specification: "Insulation Level", ownerRequest: "Class II", vendorProposed: "" },
+      ],
+      inspectionTestingPlans: [
+        { id: "1", testingItem: "Dielectric Test", testingMethod: "AC Withstand", standardTestReference: "IEC 62271", testedBy: "Lab", witnessBy: "Owner", acceptanceCriteria: "No breakdown" },
+        { id: "2", testingItem: "Partial Discharge", testingMethod: "PD Measurement", standardTestReference: "IEC 60270", testedBy: "Lab", witnessBy: "Owner", acceptanceCriteria: "< 10 pC" },
+      ],
+      documentRequestSheets: [
+        { id: "1", documentRequirement: "Type Test Report", documentType: "Certified Copy" },
+        { id: "2", documentRequirement: "Installation Manual", documentType: "Hardcopy & Softcopy" },
+      ],
+      performanceGuarantees: [
+        { id: "1", plantItem: "HV Equipment", performanceParameter: "Insulation Resistance", baselineParameter: "> 1000 MΩ", verificationMethod: "Megger Test", remedialMeasure: "Repair/Replacement" },
+      ],
+    },
+    {
+      name: "MV Induction Motor",
+      description: "Medium Voltage Induction Motor Template",
+      technicalParticulars: [
+        { id: "1", specification: "Rated Power", ownerRequest: "500 kW", vendorProposed: "" },
+        { id: "2", specification: "Voltage", ownerRequest: "6.6 kV", vendorProposed: "" },
+        { id: "3", specification: "Speed", ownerRequest: "1480 rpm", vendorProposed: "" },
+        { id: "4", specification: "Efficiency", ownerRequest: "≥ 95%", vendorProposed: "" },
+      ],
+      inspectionTestingPlans: [
+        { id: "1", testingItem: "No Load Test", testingMethod: "Voltage Application", standardTestReference: "IEC 60034", testedBy: "Vendor", witnessBy: "Owner", acceptanceCriteria: "Current < 30% rated" },
+        { id: "2", testingItem: "Full Load Test", testingMethod: "Dynamometer", standardTestReference: "IEC 60034", testedBy: "Vendor", witnessBy: "Owner", acceptanceCriteria: "Efficiency ≥ 95%" },
+      ],
+      documentRequestSheets: [
+        { id: "1", documentRequirement: "Test Certificate", documentType: "Original" },
+        { id: "2", documentRequirement: "Nameplate Photo", documentType: "Softcopy" },
+      ],
+      performanceGuarantees: [
+        { id: "1", plantItem: "MV Motor", performanceParameter: "Efficiency", baselineParameter: "≥ 95%", verificationMethod: "Load Test", remedialMeasure: "Rewind/Replacement" },
+      ],
+    },
+    {
+      name: "Oil Power Transformer",
+      description: "Oil Power Transformer Template",
+      technicalParticulars: [
+        { id: "1", specification: "Rated Capacity", ownerRequest: "50 MVA", vendorProposed: "" },
+        { id: "2", specification: "Voltage Ratio", ownerRequest: "150/20 kV", vendorProposed: "" },
+        { id: "3", specification: "Cooling Type", ownerRequest: "ONAN/ONAF", vendorProposed: "" },
+        { id: "4", specification: "Impedance", ownerRequest: "12% ± 10%", vendorProposed: "" },
+      ],
+      inspectionTestingPlans: [
+        { id: "1", testingItem: "Winding Resistance", testingMethod: "DC Resistance", standardTestReference: "IEC 60076", testedBy: "Vendor", witnessBy: "Owner", acceptanceCriteria: "Within tolerance" },
+        { id: "2", testingItem: "Oil Breakdown", testingMethod: "Dielectric Test", standardTestReference: "IEC 60156", testedBy: "Lab", witnessBy: "Owner", acceptanceCriteria: "> 70 kV" },
+      ],
+      documentRequestSheets: [
+        { id: "1", documentRequirement: "Routine Test Report", documentType: "Original" },
+        { id: "2", documentRequirement: "Oil Analysis Report", documentType: "Original" },
+      ],
+      performanceGuarantees: [
+        { id: "1", plantItem: "Transformer", performanceParameter: "Temperature Rise", baselineParameter: "< 65°C", verificationMethod: "Heat Run Test", remedialMeasure: "Cooling Enhancement" },
+      ],
+    },
+    {
+      name: "Power Kabel",
+      description: "Power Cable Template",
+      technicalParticulars: [
+        { id: "1", specification: "Type", ownerRequest: "XLPE Insulated", vendorProposed: "" },
+        { id: "2", specification: "Voltage Rating", ownerRequest: "20 kV", vendorProposed: "" },
+        { id: "3", specification: "Conductor Size", ownerRequest: "240 mm²", vendorProposed: "" },
+        { id: "4", specification: "Number of Cores", ownerRequest: "3C", vendorProposed: "" },
+      ],
+      inspectionTestingPlans: [
+        { id: "1", testingItem: "High Voltage Test", testingMethod: "AC Withstand", standardTestReference: "IEC 60502", testedBy: "Vendor", witnessBy: "Owner", acceptanceCriteria: "No breakdown" },
+        { id: "2", testingItem: "Partial Discharge", testingMethod: "PD Test", standardTestReference: "IEC 60885", testedBy: "Lab", witnessBy: "Owner", acceptanceCriteria: "< 5 pC" },
+      ],
+      documentRequestSheets: [
+        { id: "1", documentRequirement: "Type Test Certificate", documentType: "Certified Copy" },
+        { id: "2", documentRequirement: "Cable Drum Photo", documentType: "Softcopy" },
+      ],
+      performanceGuarantees: [
+        { id: "1", plantItem: "Cable", performanceParameter: "Insulation Resistance", baselineParameter: "> 100 MΩ·km", verificationMethod: "IR Test", remedialMeasure: "Replacement" },
+      ],
+    },
+    {
+      name: "Relay Proteksi",
+      description: "Protection Relay Template",
+      technicalParticulars: [
+        { id: "1", specification: "Type", ownerRequest: "Numerical/Microprocessor", vendorProposed: "" },
+        { id: "2", specification: "Functions", ownerRequest: "ANSI 50/51/87", vendorProposed: "" },
+        { id: "3", specification: "CT Input", ownerRequest: "1A / 5A", vendorProposed: "" },
+        { id: "4", specification: "Communication", ownerRequest: "IEC 61850", vendorProposed: "" },
+      ],
+      inspectionTestingPlans: [
+        { id: "1", testingItem: "Function Test", testingMethod: "Secondary Injection", standardTestReference: "IEC 60255", testedBy: "Vendor", witnessBy: "Owner", acceptanceCriteria: "All functions OK" },
+        { id: "2", testingItem: "Communication Test", testingMethod: "Protocol Test", standardTestReference: "IEC 61850", testedBy: "Vendor", witnessBy: "Owner", acceptanceCriteria: "Data transfer OK" },
+      ],
+      documentRequestSheets: [
+        { id: "1", documentRequirement: "Setting Calculation", documentType: "Hardcopy & Softcopy" },
+        { id: "2", documentRequirement: "Test Report", documentType: "Original" },
+      ],
+      performanceGuarantees: [
+        { id: "1", plantItem: "Relay", performanceParameter: "Accuracy", baselineParameter: "± 5%", verificationMethod: "Injection Test", remedialMeasure: "Recalibration" },
+      ],
+    },
+    {
+      name: "UPS",
+      description: "Uninterruptible Power Supply Template",
+      technicalParticulars: [
+        { id: "1", specification: "Capacity", ownerRequest: "100 kVA", vendorProposed: "" },
+        { id: "2", specification: "Topology", ownerRequest: "Online Double Conversion", vendorProposed: "" },
+        { id: "3", specification: "Input Voltage", ownerRequest: "380-480 VAC", vendorProposed: "" },
+        { id: "4", specification: "Backup Time", ownerRequest: "30 minutes @ full load", vendorProposed: "" },
+      ],
+      inspectionTestingPlans: [
+        { id: "1", testingItem: "Load Bank Test", testingMethod: "Resistive Load", standardTestReference: "IEC 62040", testedBy: "Vendor", witnessBy: "Owner", acceptanceCriteria: "100% load sustained" },
+        { id: "2", testingItem: "Battery Backup Test", testingMethod: "Discharge Test", standardTestReference: "IEEE 1184", testedBy: "Vendor", witnessBy: "Owner", acceptanceCriteria: "≥ 30 min backup" },
+      ],
+      documentRequestSheets: [
+        { id: "1", documentRequirement: "Load Test Report", documentType: "Original" },
+        { id: "2", documentRequirement: "Single Line Diagram", documentType: "As-Built" },
+      ],
+      performanceGuarantees: [
+        { id: "1", plantItem: "UPS", performanceParameter: "Output Voltage THD", baselineParameter: "< 3%", verificationMethod: "Power Analyzer", remedialMeasure: "Filter Adjustment" },
+      ],
+    },
+  ];
+
+  for (const template of templates) {
+    await prisma.lampiranTemplate.upsert({
+      where: { name: template.name },
+      update: {
+        description: template.description,
+        technicalParticulars: template.technicalParticulars,
+        inspectionTestingPlans: template.inspectionTestingPlans,
+        documentRequestSheets: template.documentRequestSheets,
+        performanceGuarantees: template.performanceGuarantees,
+      },
+      create: template,
+    });
+    console.log(`  ✓ Template: ${template.name}`);
+  }
+
+  console.log("✅ Lampiran Templates seeded successfully!\n");
+
   console.log("Seeding done ✅");
 }
 

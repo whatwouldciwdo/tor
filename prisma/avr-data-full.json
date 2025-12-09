@@ -1,0 +1,242 @@
+[
+    {
+        "id": "1.1-0",
+        "description": "GENERAL"
+    },
+    {
+        "id": "1.1-1",
+        "description": "Type",
+        "unit": "-",
+        "required": "Microprocessor-based static excitation system with thyristor power converter, redundant design",
+        "proposedGuaranteed": "Harus diisi oleh vendor",
+        "remarks": ""
+    },
+    {
+        "id": "1.1-2",
+        "description": "Rated Voltage",
+        "unit": "V",
+        "required": "380 ± 20%",
+        "proposedGuaranteed": "Harus diisi oleh vendor",
+        "remarks": ""
+    },
+    {
+        "id": "1.1-3",
+        "description": "Rated Frequency",
+        "unit": "Hz",
+        "required": "50 ± 5%",
+        "proposedGuaranteed": "Harus diisi oleh vendor",
+        "remarks": ""
+    },
+    {
+        "id": "1.1-4",
+        "description": "Rated Power",
+        "unit": "kVA",
+        "required": "500",
+        "proposedGuaranteed": "Harus diisi oleh vendor",
+        "remarks": ""
+    },
+    {
+        "id": "1.1-5",
+        "description": "Rated Power Factor",
+        "unit": "-",
+        "required": "0.8",
+        "proposedGuaranteed": "Harus diisi oleh vendor",
+        "remarks": ""
+    },
+    {
+        "id": "1.1-6",
+        "description": "Rated Speed",
+        "unit": "rpm",
+        "required": "1500",
+        "proposedGuaranteed": "Harus diisi oleh vendor",
+        "remarks": ""
+    },
+    {
+        "id": "1.1-7",
+        "description": "Cooling",
+        "unit": "-",
+        "required": "Natural Air Cooling",
+        "proposedGuaranteed": "Harus diisi oleh vendor",
+        "remarks": ""
+    },
+    {
+        "id": "1.1-8",
+        "description": "Degree of Protection",
+        "unit": "-",
+        "required": "Min IP 21",
+        "proposedGuaranteed": "Harus diisi oleh vendor",
+        "remarks": ""
+    },
+    {
+        "id": "1.1-9",
+        "description": "Ambient Temperature",
+        "unit": "°C",
+        "required": "Max 40",
+        "proposedGuaranteed": "Harus diisi oleh vendor",
+        "remarks": ""
+    },
+    {
+        "id": "1.1-10",
+        "description": "Altitude",
+        "unit": "m",
+        "required": "Max 1000",
+        "proposedGuaranteed": "Harus diisi oleh vendor",
+        "remarks": ""
+    },
+    {
+        "id": "1.1-11",
+        "description": "Humidity",
+        "unit": "%",
+        "required": "Max 95 non condensing",
+        "proposedGuaranteed": "Harus diisi oleh vendor",
+        "remarks": ""
+    },
+    {
+        "id": "1.1-12",
+        "description": "Seismic",
+        "unit": "-",
+        "required": "Zone 4",
+        "proposedGuaranteed": "Harus diisi oleh vendor",
+        "remarks": ""
+    },
+    {
+        "id": "1.2-0",
+        "description": "Electrical Reference"
+    },
+    {
+        "id": "1.2-1",
+        "description": "a. Rated Voltage",
+        "unit": "V",
+        "required": "380 ± 20%",
+        "proposedGuaranteed": "Harus diisi oleh vendor",
+        "remarks": ""
+    },
+    {
+        "id": "1.2-2",
+        "description": "b. Rated Frequency",
+        "unit": "Hz",
+        "required": "50 ± 5%",
+        "proposedGuaranteed": "Harus diisi oleh vendor",
+        "remarks": ""
+    },
+    {
+        "id": "1.2-3",
+        "description": "c. Rated Power",
+        "unit": "kVA",
+        "required": "500",
+        "proposedGuaranteed": "Harus diisi oleh vendor",
+        "remarks": ""
+    },
+    {
+        "id": "1.2-4",
+        "description": "d. Rated Power Factor",
+        "unit": "-",
+        "required": "0.8",
+        "proposedGuaranteed": "Harus diisi oleh vendor",
+        "remarks": ""
+    },
+    {
+        "id": "1.2-5",
+        "description": "e. Rated Speed",
+        "unit": "rpm",
+        "required": "1500",
+        "proposedGuaranteed": "Harus diisi oleh vendor",
+        "remarks": ""
+    },
+    {
+        "id": "1.3-0",
+        "description": "System Characteristic"
+    },
+    {
+        "id": "1.3-1",
+        "description": "a. Excitation Transformer configuration 3 x 1 phase",
+        "unit": "-",
+        "required": "Yes",
+        "proposedGuaranteed": "Harus diisi oleh vendor",
+        "remarks": ""
+    },
+    {
+        "id": "1.3-2",
+        "description": "b. Configuration of 3 control channels with 3 power converter",
+        "unit": "-",
+        "required": "Yes",
+        "proposedGuaranteed": "Harus diisi oleh vendor",
+        "remarks": ""
+    },
+    {
+        "id": "1.3-3",
+        "description": "c. Configuration of control channels with 2 power converter",
+        "unit": "-",
+        "required": "Yes",
+        "proposedGuaranteed": "Harus diisi oleh vendor",
+        "remarks": ""
+    },
+    {
+        "id": "1.3-4",
+        "description": "d. Automatic channel transfer in case of fault",
+        "unit": "-",
+        "required": "Yes",
+        "proposedGuaranteed": "Harus diisi oleh vendor",
+        "remarks": ""
+    },
+    {
+        "id": "1.3-5",
+        "description": "e. The redundant power configuration supported fault condition without affecting the control channel",
+        "unit": "-",
+        "required": "Yes",
+        "proposedGuaranteed": "Harus diisi oleh vendor",
+        "remarks": ""
+    },
+    {
+        "id": "1.3-6",
+        "description": "f. Manual channel transfer",
+        "unit": "-",
+        "required": "Yes",
+        "proposedGuaranteed": "Harus diisi oleh vendor",
+        "remarks": ""
+    },
+    {
+        "id": "1.3-7",
+        "description": "g. Capability of switching Converter on-line",
+        "unit": "-",
+        "required": "Yes",
+        "proposedGuaranteed": "Harus diisi oleh vendor",
+        "remarks": ""
+    },
+    {
+        "id": "1.3-8",
+        "description": "h. Supply for Excitation system",
+        "unit": "-",
+        "required": "Yes",
+        "proposedGuaranteed": "Harus diisi oleh vendor",
+        "remarks": ""
+    },
+    {
+        "id": "1.4-0",
+        "description": "Control Board"
+    },
+    {
+        "id": "1.4-1",
+        "description": "a. Type circuit board integrated and digital processor base",
+        "unit": "-",
+        "required": "Yes",
+        "proposedGuaranteed": "Harus diisi oleh vendor",
+        "remarks": ""
+    },
+    {
+        "id": "1.4-2",
+        "description": "b. Field circuit breaker",
+        "unit": "-",
+        "required": "Yes",
+        "proposedGuaranteed": "Harus diisi oleh vendor",
+        "remarks": ""
+    },
+    {
+        "id": "1.4-3",
+        "description": "c. Over voltage protection (BOD & crowbar)",
+        "unit": "-",
+        "required": "Yes",
+        "proposedGuaranteed": "Harus diisi oleh vendor",
+        "remarks": ""
+    }
+]

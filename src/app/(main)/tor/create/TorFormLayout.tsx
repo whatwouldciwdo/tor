@@ -239,6 +239,7 @@ export default function TorFormLayout({
     try {
       const url = torId ? `/api/tor/${torId}` : "/api/tor";
       const method = torId ? "PUT" : "POST";
+      const isCreatingNew = !torId; // Track if this is first save
 
       const response = await fetch(url, {
         method,
@@ -257,7 +258,18 @@ export default function TorFormLayout({
       // Update last saved data reference
       lastSaveDataRef.current = JSON.stringify(savedTor);
       
-      // Update form data with saved response
+      // ✅ FIX: Redirect to edit mode after first save to prevent duplicates
+      if (isCreatingNew) {
+        console.log(`✅ TOR created with ID ${savedTor.id}, redirecting to edit mode...`);
+        if (!isAutoSave) {
+          alertModal.showAlert('ToR created successfully! Redirecting...', 'success');
+        }
+        // Redirect to edit mode - this prevents duplicate creation on subsequent saves
+        router.push(`/tor/create?id=${savedTor.id}`);
+        return; // Exit early, page will reload in edit mode
+      }
+      
+      // Update form data with saved response (only for updates)
       setFormData({
         title: savedTor.title || "",
         description: savedTor.description || "",
@@ -328,7 +340,7 @@ export default function TorFormLayout({
     } finally {
       if (!isAutoSave) setIsSaving(false);
     }
-  }, [torId, formData, router, activeTab, alertModal]);
+  }, [torId, formData, router, activeTab, alertModal, isViewOnly, formatDateForInput]);
 
   // ✅ FIX: Debounced auto-save (saves 3 seconds after last change)
   useEffect(() => {

@@ -42,6 +42,8 @@
     "prosemirror-view": "^1.41.4",
     "react": "19.2.0",
     "react-dom": "19.2.0",
+    "react-spreadsheet": "^0.10.1",
+    "scheduler": "^0.27.0",
     "uuid": "^13.0.0"
   },
   "devDependencies": {

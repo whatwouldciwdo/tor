@@ -47,6 +47,11 @@ const createEmailHTML = (content: string) => `
       text-align: center;
       border-radius: 8px 8px 0 0;
     }
+    .logo {
+      max-width: 150px;
+      height: auto;
+      margin-bottom: 15px;
+    }
     .header h1 {
       margin: 0;
       font-size: 24px;
@@ -70,7 +75,7 @@ const createEmailHTML = (content: string) => `
     .button {
       display: inline-block;
       background: #0066cc;
-      color: white;
+      color: #ffffff !important;
       padding: 12px 30px;
       text-decoration: none;
       border-radius: 5px;
@@ -79,6 +84,7 @@ const createEmailHTML = (content: string) => `
     }
     .button:hover {
       background: #0052a3;
+      color: #ffffff !important;
     }
     .footer {
       background: #f5f5f5;
@@ -112,6 +118,7 @@ export async function sendSubmitNotification(params: {
 
   const htmlContent = createEmailHTML(`
     <div class="header">
+      <img src="cid:plnlogo" alt="PLN TOS Logo" class="logo" />
       <h1>📋 TOR Menunggu Persetujuan Anda</h1>
     </div>
     <div class="content">
@@ -155,6 +162,7 @@ export async function sendRevisionNotification(params: {
 
   const htmlContent = createEmailHTML(`
     <div class="header">
+      <img src="cid:plnlogo" alt="PLN TOS Logo" class="logo" />
       <h1>🔄 TOR Perlu Revisi</h1>
     </div>
     <div class="content">
@@ -206,6 +214,7 @@ export async function sendApprovalNotification(params: {
 
   const htmlContent = createEmailHTML(`
     <div class="header">
+      <img src="cid:plnlogo" alt="PLN TOS Logo" class="logo" />
       <h1>${icon} TOR ${isLastStep ? 'Disetujui' : 'Update Status'}</h1>
     </div>
     <div class="content">
@@ -256,6 +265,7 @@ export async function sendRejectionNotification(params: {
 
   const htmlContent = createEmailHTML(`
     <div class="header" style="background: linear-gradient(135deg, #c62828 0%, #e53935 100%);">
+      <img src="cid:plnlogo" alt="PLN TOS Logo" class="logo" />
       <h1>❌ TOR Ditolak</h1>
     </div>
     <div class="content">
@@ -312,6 +322,11 @@ async function sendEmail(params: {
       to: params.to,
       subject: params.subject,
       html: params.html,
+      attachments: [{
+        filename: 'pln-tos-logo.jpg',
+        path: './public/pln-tos-logo.jpg',
+        cid: 'plnlogo' // CID for embedding in email
+      }]
     });
 
     console.log(`✅ Email sent to ${params.to}: ${info.messageId}`);

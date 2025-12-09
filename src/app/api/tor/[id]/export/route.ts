@@ -799,32 +799,224 @@ function generateWorkStagesTable(workStagesData: any): Table {
 
 // Helper to generate Technical Particular & Guarantee (TPG) Table
 function generateTpgTable(items: any[]): Table {
-  const cellMargin = { top: 150, bottom: 150, left: 100, right: 100 };
-  const headerSize = 24; // 12pt
-  const contentSize = 22; // 11pt
+  const cellMargin = { top: 60, bottom: 60, left: 50, right: 50 }; // Compact margins for tighter spacing
+  const headerSize = 16; // 8pt - compact but readable
+  const contentSize = 14; // 7pt - compact but readable
+
+  // Detect column structure from first item
+  const firstItem = items.length > 0 ? items[0] : null;
+  const hasNewFormat = firstItem && 'description' in firstItem;
+  
+  // Define columns based on format
+  const columns = hasNewFormat
+    ? [
+        { key: 'description', label: 'DESCRIPTION', width: 40 },
+        { key: 'specified', label: 'SPECIFIED', width: 30 },
+        { key: 'proposedGuarantee', label: 'PROPOSED & GUARANTEE', width: 30 }
+      ]
+    : [
+        { key: 'specification', label: 'Spesifikasi', width: 35 },
+        { key: 'ownerRequest', label: 'Owner Request', width: 30 },
+        { key: 'vendorProposed', label: 'Vendor Proposed & Guarantee', width: 30 }
+      ];
+
+  // Header row
+  const headerCells = [
+    new TableCell({ 
+      children: [new Paragraph({ 
+        children: [new TextRun({ text: "No.", bold: true, font: "Arial", size: headerSize, color: "000000" })], 
+        alignment: AlignmentType.CENTER 
+      })], 
+      width: { size: 5, type: WidthType.PERCENTAGE }, 
+      margins: cellMargin, 
+      shading: { fill: "F3F4F6", color: "auto" } // Light gray header
+    }),
+    ...columns.map(col => 
+      new TableCell({ 
+        children: [new Paragraph({ 
+          children: [new TextRun({ text: col.label, bold: true, font: "Arial", size: headerSize, color: "000000" })], 
+          alignment: AlignmentType.CENTER 
+        })], 
+        width: { size: col.width, type: WidthType.PERCENTAGE }, 
+        margins: cellMargin, 
+        shading: { fill: "F3F4F6", color: "auto" } // Light gray header
+      })
+    )
+  ];
+
+  // Map section names to colors (order matters - check more specific first)
+  const sectionColors: { [key: string]: string } = {
+    'SPEC ARRESTER': 'FFFF00',        // Yellow
+    'SPEC COUNTER LA': 'FFA500',      // Orange
+    'INSPECTION & TESTING REQUIREMENT AT FACTORY': 'FFDAB9', // Peach
+    'INSPECTION & TESTING REQUIREMENT AT SITE (WITNESS)': 'D4F1D4',    // Light green
+    'INSPECTION & TESTING REQUIREMENT AT SITE': 'D4F1D4',    // Light green (fallback)
+    'DOCUMENTS REQUIREMENT': 'ADD8E6'  // Light blue
+  };
+
+  // Track section number (only for main sections)
+  let sectionNumber = 0;
 
   const rows = [
     new TableRow({
-      children: [
-        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "No.", bold: true, font: "Arial", size: headerSize })], alignment: AlignmentType.CENTER })], width: { size: 5, type: WidthType.PERCENTAGE }, margins: cellMargin, shading: { fill: "F3F4F6", color: "auto" } }),
-        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Spesifikasi", bold: true, font: "Arial", size: headerSize })], alignment: AlignmentType.CENTER })], width: { size: 35, type: WidthType.PERCENTAGE }, margins: cellMargin, shading: { fill: "F3F4F6", color: "auto" } }),
-        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Owner Request", bold: true, font: "Arial", size: headerSize })], alignment: AlignmentType.CENTER })], width: { size: 30, type: WidthType.PERCENTAGE }, margins: cellMargin, shading: { fill: "F3F4F6", color: "auto" } }),
-        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Vendor Proposed & Guarantee", bold: true, font: "Arial", size: headerSize })], alignment: AlignmentType.CENTER })], width: { size: 30, type: WidthType.PERCENTAGE }, margins: cellMargin, shading: { fill: "F3F4F6", color: "auto" } }),
-      ],
-      tableHeader: true,
+      children: headerCells,
+      // tableHeader: true, // Disabled to prevent header repetition causing table split
     }),
-    ...items.map((item, index) => 
-      new TableRow({
-        children: [
-          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: (index + 1).toString(), font: "Arial", size: contentSize })], alignment: AlignmentType.CENTER })], margins: cellMargin }),
-          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: item.specification || "", font: "Arial", size: contentSize })] })], margins: cellMargin }),
-          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: item.ownerRequest || "", font: "Arial", size: contentSize })] })], margins: cellMargin }),
-          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: item.vendorProposed || "", font: "Arial", size: contentSize })] })], margins: cellMargin }),
-        ],
-      })
-    ),
+    ...items.map((item, index) => {
+      // Check if this is a header row - works for both formats
+      const firstColumnKey = columns[0].key;
+      let firstFieldValue = item[firstColumnKey] || '';
+      
+      // Check if all data fields are missing (only description present)
+      // Arrester format: no specified/proposedGuarantee
+      // AVR format: no unit/required/proposedGuaranteed/remarks
+      const isHeaderRow = item.description && 
+        !item.specified && !item.proposedGuarantee &&  // Arrester format
+        !item.unit && !item.required && !item.proposedGuaranteed && !item.remarks; // AVR format
+      
+      const upperText = firstFieldValue.toUpperCase();
+      
+      // Check if this is a main section (case-insensitive)
+      const isMainSection = upperText.includes("SPEC") || 
+                           upperText.includes("INSPECTION") || 
+                           upperText.includes("DOCUMENTS");
+      
+      // Increment section number only for main sections
+      if (isHeaderRow && isMainSection) {
+        sectionNumber++;
+      }
+      
+      // Determine section color based on text (check most specific first)
+      let sectionColor = "FFFFFF"; // default white
+      
+      // Check for specific sections in order of specificity
+      if (upperText.includes("SPEC ARRESTER")) {
+        sectionColor = sectionColors['SPEC ARRESTER'];
+      } else if (upperText.includes("SPEC COUNTER LA")) {
+        sectionColor = sectionColors['SPEC COUNTER LA'];
+      } else if (upperText.includes("INSPECTION") && upperText.includes("FACTORY")) {
+        sectionColor = sectionColors['INSPECTION & TESTING REQUIREMENT AT FACTORY'];
+      } else if (upperText.includes("INSPECTION") && upperText.includes("SITE")) {
+        sectionColor = sectionColors['INSPECTION & TESTING REQUIREMENT AT SITE'];
+      } else if (upperText.includes("DOCUMENTS REQUIREMENT")) {
+        sectionColor = sectionColors['DOCUMENTS REQUIREMENT'];
+      }
+      
+      // For main section headers, create merged cell row
+      if (isHeaderRow && isMainSection) {
+        return new TableRow({
+          children: [
+            new TableCell({
+              children: [new Paragraph({
+                children: [new TextRun({
+                  text: sectionNumber.toString(),
+                  font: "Arial",
+                  size: contentSize,
+                  bold: true,
+                  color: "000000"
+                })],
+                alignment: AlignmentType.CENTER
+              })],
+              margins: cellMargin,
+              shading: { fill: sectionColor, color: "auto" }
+            }),
+            new TableCell({
+              children: [new Paragraph({
+                children: [new TextRun({
+                  text: cleanText,
+                  font: "Arial",
+                  size: contentSize,
+                  bold: true,
+                  color: "000000"
+                })]
+              })],
+              columnSpan: 3, // Merge across all 3 data columns
+              margins: cellMargin,
+              shading: { fill: sectionColor, color: "auto" }
+            })
+          ]
+        });
+      }
+      
+      // For subsection headers (orange background, no merge)
+      if (isHeaderRow && !isMainSection) {
+        const cells = [
+          new TableCell({
+            children: [new Paragraph({
+              children: [new TextRun({
+                text: "",
+                font: "Arial",
+                size: contentSize
+              })],
+              alignment: AlignmentType.CENTER
+            })],
+            margins: cellMargin,
+            shading: { fill: sectionColor, color: "auto" }
+          }),
+          ...columns.map((col) =>
+            new TableCell({
+              children: [new Paragraph({
+                children: [new TextRun({
+                  text: item[col.key] ? item[col.key].replace(/===/g, '').trim() : "",
+                  font: "Arial",
+                  size: contentSize,
+                  bold: true,
+                  color: "000000"
+                })]
+              })],
+              margins: cellMargin,
+              shading: { fill: sectionColor, color: "auto" }
+            })
+          )
+        ];
+        
+        return new TableRow({ children: cells });
+      }
+      
+      // Regular detail rows - no number, no special formatting
+      const cells = [
+        new TableCell({
+          children: [new Paragraph({
+            children: [new TextRun({
+              text: "",
+              font: "Arial",
+              size: contentSize
+            })],
+            alignment: AlignmentType.CENTER
+          })],
+          margins: cellMargin
+        }),
+        ...columns.map((col) =>
+          new TableCell({
+            children: [new Paragraph({
+              children: [new TextRun({
+                text: item[col.key] || "",
+                font: "Arial",
+                size: contentSize,
+                color: "000000"
+              })]
+            })],
+            margins: cellMargin
+          })
+        )
+      ];
+      
+      return new TableRow({ children: cells });
+    }),
   ];
-  return new Table({ rows, width: { size: 100, type: WidthType.PERCENTAGE } });
+  
+  return new Table({ 
+    rows, 
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    borders: {
+      top: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+      bottom: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+      left: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+      right: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+      insideHorizontal: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+      insideVertical: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+    },
+  });
 }
 
 // Helper to generate Inspection Testing Plan (ITP) Table

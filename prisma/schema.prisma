@@ -303,3 +303,30 @@ model TorApprovalHistory {
   @@index([torId])
   @@index([actedByUserId])
 }
+
+// 10. LampiranTemplate (Templates for Tab 6 - Lampiran)
+model LampiranTemplate {
+  id                      Int      @id @default(autoincrement())
+  name                    String   @unique  // "Arrester", "AVR", etc.
+  description             String?
+  
+  // Render mode: "table" for simple table, "spreadsheet" for Excel-like grid
+  renderMode              String   @default("table")
+  
+  // Column configuration metadata (defines table structure)
+  tpgColumns              Json?    // Column definitions for TPG table
+  itpColumns              Json?    // Column definitions for ITP table
+  drsColumns              Json?    // Column definitions for DRS table
+  pgrsColumns             Json?    // Column definitions for PGRS table
+  
+  // Pre-filled table data (as JSON)
+  technicalParticulars    Json?    // TPG data
+  inspectionTestingPlans  Json?    // ITP data
+  documentRequestSheets   Json?    // DRS data
+  performanceGuarantees   Json?    // PGRS data
+  
+  isActive                Boolean  @default(true)
+  
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+}

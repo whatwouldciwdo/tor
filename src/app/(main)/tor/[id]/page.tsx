@@ -61,7 +61,20 @@ export default async function TorDetailPage({ params }: PageProps) {
     }),
     prisma.user.findUnique({
       where: { id: sessionUser.id },
-      select: { id: true, positionId: true, isSuperAdmin: true },
+      select: { 
+        id: true, 
+        positionId: true, 
+        isSuperAdmin: true,
+        position: {
+          include: {
+            positionRoles: {
+              include: {
+                role: true
+              }
+            }
+          }
+        }
+      },
     }),
   ]);
 
@@ -113,6 +126,12 @@ export default async function TorDetailPage({ params }: PageProps) {
     !isCreator &&
     (dbUser.isSuperAdmin ||
       (currentStep && dbUser.positionId === currentStep.positionId));
+
+  // Check if user has EXPORT role
+  const canExport =
+    !!dbUser?.position?.positionRoles?.some(
+      (pr: any) => pr.role?.name === 'EXPORT'
+    );
 
   // Helper function to format dates for HTML date inputs (YYYY-MM-DD)
   const formatDateForInput = (date: Date | string | null | undefined): string => {
@@ -233,12 +252,13 @@ export default async function TorDetailPage({ params }: PageProps) {
               </Link>
             )}
 
-            {/* TorDetailClient handles submit, approve, revise, reject buttons */}
+            {/* TorDetailClient handles submit, approve, revise, reject, export buttons */}
             <TorDetailClient
               torId={id}
               status={tor.statusStage}
               canSubmit={canSubmit}
               canApprove={canApprove}
+              canExport={canExport}
             />
           </div>
         </div>

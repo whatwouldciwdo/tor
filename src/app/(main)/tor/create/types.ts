@@ -20,37 +20,32 @@ export interface ApprovalSignature {
   date: string;
 }
 
-// Tab 6 Interfaces
+// Tab 6 Column Configuration
+export interface ColumnConfig {
+  key: string;
+  label: string;
+  width?: string;
+}
+
+// Tab 6 Interfaces - Flexible structure to support different column configs
 export interface TechnicalParticular {
   id: string;
-  specification: string;
-  ownerRequest: string;
-  vendorProposed: string;
+  [key: string]: string; // Allow dynamic fields based on column config
 }
 
 export interface InspectionTestingPlan {
   id: string;
-  testingItem: string;
-  testingMethod: string;
-  standardTestReference: string;
-  testedBy: string;
-  witnessBy: string;
-  acceptanceCriteria: string;
+  [key: string]: string; // Allow dynamic fields based on column config
 }
 
 export interface DocumentRequestSheet {
   id: string;
-  documentRequirement: string;
-  documentType: string;
+  [key: string]: string; // Allow dynamic fields based on column config
 }
 
 export interface PerformanceGuarantee {
   id: string;
-  plantItem: string;
-  performanceParameter: string;
-  baselineParameter: string;
-  verificationMethod: string;
-  remedialMeasure: string;
+  [key: string]: string; // Allow dynamic fields based on column config
 }
 
 export interface TorFormData {
