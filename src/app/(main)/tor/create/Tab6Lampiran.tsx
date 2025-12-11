@@ -3,14 +3,29 @@
 import { TabProps, TechnicalParticular, InspectionTestingPlan, DocumentRequestSheet, PerformanceGuarantee, ColumnConfig } from "./types";
 import { v4 as uuidv4 } from "uuid";
 import { Plus, Trash2, ChevronDown, ChevronUp } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useConfirmModal } from "@/hooks/useModal";
 import { ConfirmModal } from "@/components/Modal";
+import dynamic from "next/dynamic";
+import { CellBase, Matrix } from "react-spreadsheet";
+
+// Dynamic import for spreadsheet to avoid SSR issues
+const SpreadsheetEditor = dynamic(() => import("./SpreadsheetEditor"), { 
+  ssr: false,
+  loading: () => <div className="p-4 text-center text-gray-500">Loading spreadsheet...</div>
+});
+
+// Dynamic import for Battery template
+const BatteryTemplate = dynamic(() => import("./components/BatteryTemplate"), {
+  ssr: false,
+  loading: () => <div className="p-4 text-center text-gray-500">Loading battery template...</div>
+});
 
 interface LampiranTemplate {
   id: number;
   name: string;
   description: string | null;
+  renderMode: "table" | "spreadsheet"; // "table" or "spreadsheet"
   tpgColumns?: ColumnConfig[];
   itpColumns?: ColumnConfig[];
   drsColumns?: ColumnConfig[];
@@ -56,6 +71,8 @@ export default function Tab6Lampiran({ formData, onChange, isEditing }: TabProps
   // Template state
   const [templates, setTemplates] = useState<LampiranTemplate[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
+  const [currentRenderMode, setCurrentRenderMode] = useState<"table" | "spreadsheet">("table");
+  const [currentTemplateName, setCurrentTemplateName] = useState<string>(""); // Track which template is loaded
   const confirmModal = useConfirmModal();
   
   // Collapse state for each table section
@@ -114,25 +131,118 @@ export default function Tab6Lampiran({ formData, onChange, isEditing }: TabProps
   // Apply template data to form
   const applyTemplate = (template: LampiranTemplate) => {
     console.log('📋 Applying template:', template.name);
-    console.log('📋 Template TPG data sample:', template.technicalParticulars?.[0]);
+    console.log('📋 Template renderMode:', template.renderMode);
+    console.log('📋 Template TPG data:', template.technicalParticulars);
     console.log('📋 Template TPG columns:', template.tpgColumns);
     
-    // Generate new UUIDs for all items to avoid conflicts
-    const generateItemsWithNewIds = (items: any[]) => {
+    // Helper to flatten nested section-based data into flat array
+    const flattenSectionData = (data: any): any[] => {
+      // Check if data has sections structure (new nested format)
+      if (data && typeof data === 'object' && data.sections && Array.isArray(data.sections)) {
+        console.log('📋 Flattening nested section data');
+        const flatArray: any[] = [];
+        
+        // Check if this is Battery format (sections have specificationRequirements items)
+        const isBatteryType = data.sections.some((s: any) => 
+          s.items?.some((item: any) => 'spec1' in item || 'specificationRequirements' in item)
+        );
+        
+        // Check if this is the new multi-column Battery format (has spec1, spec2, etc.)
+        const isMultiColumnBattery = data.sections.some((s: any) => 
+          s.items?.some((item: any) => 'spec1' in item)
+        );
+        
+        // Process each section
+        data.sections.forEach((section: any) => {
+          // Add section header row
+          if (isMultiColumnBattery) {
+            // Multi-column Battery format: use spec1 for section title
+            flatArray.push({
+              id: section.number || section.id,
+              spec1: section.title,
+              spec2: "",
+              spec3: "",
+              spec4: "",
+              vendorPTX: "",
+              vendorPTY: "",
+              vendorPTZ: "",
+              keterangan: "",
+              isSectionHeader: true
+            });
+          } else if (isBatteryType) {
+            // Old Battery format: use specificationRequirements for section title
+            flatArray.push({
+              id: section.number || section.id,
+              specificationRequirements: section.title,
+              vendorPTX: "",
+              vendorPTY: "",
+              vendorPTZ: "",
+              keterangan: "",
+              isSectionHeader: true
+            });
+          } else {
+            // Other formats: use description
+            flatArray.push({
+              id: section.number || section.id,
+              description: section.title,
+              isSectionHeader: true
+            });
+          }
+          
+          // Add all items from this section
+          if (section.items && Array.isArray(section.items)) {
+            section.items.forEach((item: any) => {
+              flatArray.push({
+                ...item,
+                id: item.id || uuidv4()
+              });
+            });
+          }
+        });
+        
+        console.log('📋 Flattened array length:', flatArray.length);
+        console.log('📋 First item:', flatArray[0]);
+        return flatArray;
+      }
+      
+      // Already flat array format (old format)
+      if (Array.isArray(data)) {
+        console.log('📋 Data already in flat array format');
+        return data;
+      }
+      
+      // Unknown format
+      console.warn('⚠️ Unknown data format, returning empty array');
+      return [];
+    };
+    
+    // KEEP original IDs from template to preserve section numbering (e.g., "1-0", "1.2-3")
+    // Only use UUID for items without ID or for manually added rows
+    const preserveOrGenerateIds = (items: any[]) => {
       if (!Array.isArray(items)) return [];
-      return items.map(item => ({ ...item, id: uuidv4() }));
+      return items.map(item => ({ 
+        ...item, 
+        id: item.id || uuidv4() // Keep original ID if exists, otherwise generate UUID
+      }));
     };
 
     const newData = {
-      technicalParticulars: generateItemsWithNewIds(template.technicalParticulars || []),
-      inspectionTestingPlans: generateItemsWithNewIds(template.inspectionTestingPlans || []),
-      documentRequestSheets: generateItemsWithNewIds(template.documentRequestSheets || []),
-      performanceGuarantees: generateItemsWithNewIds(template.performanceGuarantees || []),
+      technicalParticulars: preserveOrGenerateIds(flattenSectionData(template.technicalParticulars)),
+      inspectionTestingPlans: preserveOrGenerateIds(flattenSectionData(template.inspectionTestingPlans)),
+      documentRequestSheets: preserveOrGenerateIds(flattenSectionData(template.documentRequestSheets)),
+      performanceGuarantees: preserveOrGenerateIds(flattenSectionData(template.performanceGuarantees)),
     };
     
-    console.log('📋 New TPG data sample:', newData.technicalParticulars?.[0]);
+    console.log('📋 New TPG data length:', newData.technicalParticulars.length);
+    console.log('📋 New TPG data first 3:', newData.technicalParticulars.slice(0, 3));
     
     onChange(newData);
+    
+    // Set the render mode based on template
+    setCurrentRenderMode(template.renderMode || "table");
+    
+    // Track which template is currently loaded
+    setCurrentTemplateName(template.name);
 
     setSelectedTemplateId("");
   };
@@ -169,12 +279,41 @@ export default function Tab6Lampiran({ formData, onChange, isEditing }: TabProps
     console.log('🔍 TPG Column Detection:', {
       firstDataItem,
       itemKeys,
+      hasSpec1: itemKeys.includes('spec1'),
       hasUnit: itemKeys.includes('unit'),
       hasRequired: itemKeys.includes('required'),
       hasProposedGuaranteed: itemKeys.includes('proposedGuaranteed'),
       hasSpecified: itemKeys.includes('specified'),
-      hasProposedGuarantee: itemKeys.includes('proposedGuarantee')
+      hasProposedGuarantee: itemKeys.includes('proposedGuarantee'),
+      hasSpecification: itemKeys.includes('specification')
     });
+    
+    console.log('📊 First data item type:', Array.isArray(firstDataItem) ? 'Array' : 'Object');
+    
+    // Check for multi-column Battery format (has spec1, spec2, spec3, spec4)
+    // This uses a single wide "specificationRequirements" column with nested content
+    if (itemKeys.includes('spec1') && itemKeys.includes('vendorPTX')) {
+      console.log('✅ Using multi-column Battery format (single spec column with nested content)');
+      return [
+        { key: "specificationRequirements", label: "SPESIFICATION REQUIREMENTS", width: "45%" },
+        { key: "vendorPTX", label: "PT. X", width: "13%" },
+        { key: "vendorPTY", label: "PT. Y", width: "13%" },
+        { key: "vendorPTZ", label: "PT. Z", width: "13%" },
+        { key: "keterangan", label: "KETERANGAN", width: "16%" }
+      ];
+    }
+    
+    // Check for old Battery format (has specificationRequirements, vendorPTX, vendorPTY, vendorPTZ, keterangan)
+    if (itemKeys.includes('specificationRequirements') && itemKeys.includes('vendorPTX')) {
+      console.log('✅ Using Battery format (6 columns with merged header)');
+      return [
+        { key: "specificationRequirements", label: "SPESIFICATION REQUIREMENTS", width: "30%" },
+        { key: "vendorPTX", label: "PT. X", width: "15%" },
+        { key: "vendorPTY", label: "PT. Y", width: "15%" },
+        { key: "vendorPTZ", label: "PT. Z", width: "15%" },
+        { key: "keterangan", label: "KETERANGAN", width: "25%" }
+      ];
+    }
     
     // Check for AVR format (has unit, required, proposedGuaranteed, remarks)
     if (itemKeys.includes('unit') && itemKeys.includes('required') && itemKeys.includes('proposedGuaranteed')) {
@@ -261,82 +400,274 @@ export default function Tab6Lampiran({ formData, onChange, isEditing }: TabProps
         </div>
 
         {!collapsedSections.tpg && (
-        <div className="space-y-4">
-
+        <div className="space-y-6">
+        {/* Conditional rendering: Spreadsheet or Table */}
+        {(() => {
+          console.log('🎭 TPG Render Mode:', currentRenderMode);
+          return null;
+        })()}
+        {currentRenderMode === "spreadsheet" ? (
+          // Spreadsheet mode for complex templates like AVR
+          <div className="space-y-4">
+            <SpreadsheetEditor
+              data={(() => {
+                // Convert JSON data to spreadsheet matrix
+                const columns = getTPGColumns();
+                const matrix: Matrix<CellBase> = [];
+                
+                // Add data rows (NO header row - Spreadsheet component shows columnLabels)
+                (formData.technicalParticulars || []).forEach((item: any) => {
+                  const rowData = columns.map(col => ({
+                    value: item[col.key] || "",
+                  }));
+                  matrix.push(rowData);
+                });
+                
+                // Add empty rows if needed (minimum 5 rows for usability)
+                if (matrix.length < 5) {
+                  for (let i = matrix.length; i < 5; i++) {
+                    matrix.push(columns.map(() => ({ value: "" })));
+                  }
+                }
+                
+                return matrix;
+              })()}
+              onChange={(newData) => {
+                // Convert spreadsheet matrix back to JSON
+                const columns = getTPGColumns();
+                const result: any[] = [];
+                
+                // Also preserve original IDs where possible
+                const originalItems = formData.technicalParticulars || [];
+                
+                // Process all rows (no header row to skip)
+                for (let i = 0; i < newData.length; i++) {
+                  const row = newData[i];
+                  if (!row || row.every(cell => !cell?.value)) continue; // Skip empty rows
+                  
+                  // Try to keep original ID if the row index matches
+                  const originalId = originalItems[i]?.id;
+                  const obj: any = { id: originalId || uuidv4() };
+                  columns.forEach((col, j) => {
+                    obj[col.key] = row[j]?.value || "";
+                  });
+                  result.push(obj);
+                }
+                
+                onChange({ technicalParticulars: result });
+              }}
+              headers={getTPGColumns().map(c => c.label)}
+              rowLabels={(() => {
+                // Generate row labels based on item IDs
+                // Section headers (IDs without hyphen-letter like "1", "1.1") show the section number
+                // Data rows (IDs with hyphen-letter like "1-a", "1.1-a") show empty string
+                const items = formData.technicalParticulars || [];
+                const labels: string[] = [];
+                
+                items.forEach((item: any) => {
+                  const id = item.id || "";
+                  const hasHyphenLetter = /-[a-z]/.test(id);
+                  const isLegacyHeader = id.endsWith('-0');
+                  
+                  if (isLegacyHeader) {
+                    // Legacy format: "1-0" -> "1"
+                    labels.push(id.replace('-0', ''));
+                  } else if (!hasHyphenLetter && id) {
+                    // New format header: "1", "1.1", "1.10" etc.
+                    labels.push(id);
+                  } else {
+                    // Data row: show empty
+                    labels.push("");
+                  }
+                });
+                
+                // Add empty labels for any extra empty rows
+                const currentLength = labels.length;
+                if (currentLength < 5) {
+                  for (let i = currentLength; i < 5; i++) {
+                    labels.push("");
+                  }
+                }
+                
+                return labels;
+              })()}
+              isEditing={isEditing === true}
+            />
+            <p className="text-sm text-gray-500">
+              💡 Tips: Anda dapat copy-paste data dari Excel langsung ke spreadsheet di atas
+            </p>
+          </div>
+        ) : currentTemplateName === "Battery" ? (
+          // Custom Battery component with advanced layout and SVG chart
+          <BatteryTemplate
+            data={formData.technicalParticulars || []}
+            onChange={(updatedData) => onChange({ technicalParticulars: updatedData })}
+            isEditing={isEditing === true}
+          />
+        ) : (
+          // Table mode for simple templates like Arrester
+          <>
         <div className={tableContainer}>
           {(() => {
             const columns = getTPGColumns();
             const firstColumnKey = columns[0]?.key || 'specification';
             
+            // Check if this is Battery format (has vendorPTX column)
+            const isBatteryFormat = columns.some(col => col.key === 'vendorPTX');
+            // Check if this is multi-column Battery format (has spec1-spec4)
+            const isMultiColumnBattery = columns.some(col => col.key === 'spec1');
+            
             return (
-              <table className={`${tableClass} min-w-[1250px]`}>
+              <table className={`${tableClass} min-w-[1200px] border-collapse`}>
                 <thead className="bg-gray-50">
-                  <tr>
-                    <th className={`${thClass} w-20`}>No.</th>
-                    {columns.map((col) => (
-                      <th key={col.key} className={thClass} style={{ width: col.width }}>
-                        {col.label}
-                      </th>
-                    ))}
-                    {isEditing && <th className={`${thClass} w-20`}></th>}
-                  </tr>
+                  {isMultiColumnBattery ? (
+                    // Multi-column Battery format: Two-row header with single SPESIFICATION REQUIREMENTS + NAMA VENDOR
+                    <>
+                      <tr>
+                        <th className={`${thClass} w-12`} rowSpan={2}>NO</th>
+                        <th className={`${thClass}`} style={{ width: "40%" }} rowSpan={2}>SPESIFICATION REQUIREMENTS</th>
+                        <th className={`${thClass}`} colSpan={3}>NAMA VENDOR</th>
+                        <th className={`${thClass}`} style={{ width: "17%" }} rowSpan={2}>KETERANGAN</th>
+                        {isEditing && <th className={`${thClass} w-12`} rowSpan={2}></th>}
+                      </tr>
+                      <tr>
+                        <th className={`${thClass}`} style={{ width: "10%" }}>PT. X</th>
+                        <th className={`${thClass}`} style={{ width: "10%" }}>PT. Y</th>
+                        <th className={`${thClass}`} style={{ width: "10%" }}>PT. Z</th>
+                      </tr>
+                    </>
+                  ) : isBatteryFormat ? (
+                    // Old Battery format: Single spec column + NAMA VENDOR
+                    <>
+                      <tr>
+                        <th className={`${thClass} w-20`} rowSpan={2}>NO</th>
+                        <th className={`${thClass}`} style={{ width: "30%" }} rowSpan={2}>SPESIFICATION REQUIREMENTS</th>
+                        <th className={`${thClass}`} colSpan={3}>NAMA VENDOR</th>
+                        <th className={`${thClass}`} style={{ width: "25%"  }} rowSpan={2}>KETERANGAN</th>
+                        {isEditing && <th className={`${thClass} w-20`} rowSpan={2}></th>}
+                      </tr>
+                      <tr>
+                        <th className={`${thClass}`} style={{ width: "15%" }}>PT. X</th>
+                        <th className={`${thClass}`} style={{ width: "15%" }}>PT. Y</th>
+                        <th className={`${thClass}`} style={{ width: "15%" }}>PT. Z</th>
+                      </tr>
+                    </>
+                  ) : (
+                    // Standard single-row header for other formats
+                    <tr>
+                      <th className={`${thClass} w-20`}>No.</th>
+                      {columns.map((col) => (
+                        <th key={col.key} className={thClass} style={{ width: col.width }}>
+                          {col.label}
+                        </th>
+                      ))}
+                      {isEditing && <th className={`${thClass} w-20`}></th>}
+                    </tr>
+                  )}
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {(() => {
-                    let sectionNumber = 0;
-                    
                     return (formData.technicalParticulars || []).map((item, index) => {
-                      // Check if this is a header row - works for both formats
-                      // Arrester format: only has description (no specified/proposedGuarantee)
-                      // AVR format: only has description (no unit/required/proposedGuaranteed/remarks)
-                      const isHeaderRow = item.description && 
-                        !item.specified && !item.proposedGuarantee &&  // Arrester format
-                        !item.unit && !item.required && !item.proposedGuaranteed && !item.remarks; // AVR format
-                      
-                      const firstFieldValue = item[firstColumnKey] || '';
-                      const upperText = firstFieldValue.toUpperCase();
-                      
-                      // Check if this is a main section (case-insensitive)
-                      const isMainSection = upperText.includes("SPEC") || 
-                                           upperText.includes("INSPECTION") || 
-                                           upperText.includes("DOCUMENTS");
-                      
-                      // Increment section number only for main sections
-                      if (isHeaderRow && isMainSection) {
-                        sectionNumber++;
+                      // Debug each item
+                      if (index < 3) {
+                        console.log(`🔍 Row ${index}:`, {
+                          id: item.id,
+                          hasSpec1: 'spec1' in item,
+                          spec1Value: (item as any).spec1,
+                          isSectionHeader: (item as any).isSectionHeader,
+                          keys: Object.keys(item)
+                        });
                       }
                       
-                      // Determine section color based on text (check most specific first)
+                      // Check if this item has spec1 field (multi-column Battery format)
+                      const hasSpec1 = 'spec1' in item;
+                      const isMultiColumnBatteryRow = isBatteryFormat && hasSpec1;
+                      
+                      console.log(`Row ${item.id}: isMultiColumnBatteryRow=${isMultiColumnBatteryRow}, isBatteryFormat=${isBatteryFormat}, hasSpec1=${hasSpec1}`);
+                      
+                      // For Battery format: check isSectionHeader flag (set during flattening)
+                      const isBatterySectionHeader = isBatteryFormat && (item as any).isSectionHeader;
+                      
+                      // For non-Battery formats, detect header rows by ID patterns or content
+                      const hasHyphenLetter = item.id && /-[a-z]/.test(item.id);
+                      const isLegacyHeader = item.id && item.id.endsWith('-0');
+                      const isNewFormatHeader = !isBatteryFormat && item.id && !hasHyphenLetter && !isLegacyHeader;
+                      
+                      const isHeaderByContent = !isBatteryFormat && item.description && 
+                        !item.specified && !item.proposedGuarantee &&  // Arrester format
+                        (!item.unit || item.unit === '-') && !item.required && !item.proposedGuaranteed && !item.remarks; // AVR format
+                      
+                      // Combined header detection
+                      const isHeaderRow = isBatterySectionHeader || isLegacyHeader || isNewFormatHeader || isHeaderByContent;
+                      
+                      // Determine section color and styling
                       let rowBgClass = "bg-white hover:bg-gray-50";
                       let textColorClass = "text-gray-900";
                       
-                      if (isHeaderRow && isMainSection) {
-                        // Main section headers with specific colors
-                        if (upperText.includes("SPEC ARRESTER")) {
-                          rowBgClass = "bg-yellow-300"; // Yellow
-                          textColorClass = "text-gray-900 font-semibold";
-                        } else if (upperText.includes("SPEC COUNTER LA")) {
-                          rowBgClass = "bg-orange-400"; // Orange
-                          textColorClass = "text-gray-900 font-semibold";
-                        } else if (upperText.includes("INSPECTION") && upperText.includes("FACTORY")) {
-                          rowBgClass = "bg-orange-200"; // Peach
-                          textColorClass = "text-gray-900 font-semibold";
-                        } else if (upperText.includes("INSPECTION") && upperText.includes("SITE")) {
-                          rowBgClass = "bg-green-200"; // Light green
-                          textColorClass = "text-gray-900 font-semibold";
-                        } else if (upperText.includes("DOCUMENTS REQUIREMENT")) {
-                          rowBgClass = "bg-blue-200"; // Light blue
-                          textColorClass = "text-gray-900 font-semibold";
+                      if (isHeaderRow) {
+                        // Section headers get special styling
+                        rowBgClass = "bg-blue-100";
+                        textColorClass = "text-gray-900 font-bold";
+                        
+                        // For non-Battery formats with specific section colors
+                        if (!isBatteryFormat) {
+                          const firstFieldValue = item[firstColumnKey] || '';
+                          const upperText = firstFieldValue.toUpperCase();
+                          
+                          if (upperText.includes("SPEC ARRESTER")) {
+                            rowBgClass = "bg-yellow-300";
+                          } else if (upperText.includes("SPEC COUNTER LA")) {
+                            rowBgClass = "bg-orange-400";
+                          } else if (upperText.includes("INSPECTION") && upperText.includes("FACTORY")) {
+                            rowBgClass = "bg-orange-200";
+                          } else if (upperText.includes("INSPECTION") && upperText.includes("SITE")) {
+                            rowBgClass = "bg-green-200";
+                          } else if (upperText.includes("DOCUMENTS REQUIREMENT")) {
+                            rowBgClass = "bg-blue-200";
+                          }
                         }
-                      } else if (isHeaderRow && !isMainSection) {
-                        // Subsection headers
-                        rowBgClass = "bg-gray-100";
-                        textColorClass = "text-gray-900 font-semibold";
                       }
                       
-                      // For header rows, render merged cell
-                      if (isHeaderRow) {
-                        // Extract section number from ID (e.g., "1.2-0" -> "1.2", "1-0" -> "1")
+                      // For multi-column Battery format header rows
+                      if (isMultiColumnBatteryRow && isHeaderRow) {
+                        return (
+                          <tr key={item.id} className={rowBgClass}>
+                            <td className={`${tdClass} text-base ${textColorClass} text-center`}>
+                              {item.id}
+                            </td>
+                            <td className={`${tdClass} text-base ${textColorClass}`}>
+                              {(item as any).spec1}
+                            </td>
+                            <td className={`${tdClass}`}></td>
+                            <td className={`${tdClass}`}></td>
+                            <td className={`${tdClass}`}></td>
+                            <td className={`${tdClass}`}></td>
+                            {isEditing && <td className={`${tdClass}`}></td>}
+                          </tr>
+                        );
+                      }
+                      
+                      // For old Battery format header rows
+                      if (isBatteryFormat && !isMultiColumnBatteryRow && isHeaderRow) {
+                        return (
+                          <tr key={item.id} className={rowBgClass}>
+                            <td className={`${tdClass} text-base ${textColorClass} text-center`}>
+                              {item.id}
+                            </td>
+                            <td className={`${tdClass} text-base ${textColorClass}`}>
+                              {item.specificationRequirements}
+                            </td>
+                            <td className={`${tdClass}`}></td>
+                            <td className={`${tdClass}`}></td>
+                            <td className={`${tdClass}`}></td>
+                            <td className={`${tdClass}`}></td>
+                            {isEditing && <td className={`${tdClass}`}></td>}
+                          </tr>
+                        );
+                      }
+                      
+                      // For non-Battery format header rows
+                      if (isHeaderRow && !isBatteryFormat) {
                         const sectionId = item.id ? item.id.split('-')[0] : '';
                         
                         return (
@@ -352,7 +683,245 @@ export default function Tab6Lampiran({ formData, onChange, isEditing }: TabProps
                         );
                       }
                       
-                      // Regular data rows - NO column is empty
+                      // Regular data rows for multi-column Battery format (spec1-spec4)
+                      // Uses nested table inside SPESIFICATION REQUIREMENTS cell
+                      if (isMultiColumnBatteryRow) {
+                        return (
+                          <tr key={item.id} className={rowBgClass}>
+                            <td className={`${tdClass} text-base ${textColorClass} font-medium text-center`}>
+                              {item.id}
+                            </td>
+                            <td className={`${tdClass} p-0 border border-gray-400`}>
+                              {/* Nested table for spec1-spec4 inside single cell */}
+                              {(() => {
+                                const hasMerge = (item as any).mergeSpec1Rows;
+                                const spec1Empty = !(item as any).spec1 || (item as any).spec1.trim() === '';
+                                
+                                return (
+                                  <table className="w-full table-fixed border-collapse">
+                                    <colgroup>
+                                      <col style={{ width: '30%' }} />
+                                      <col style={{ width: '25%' }} />
+                                      <col style={{ width: '25%' }} />
+                                      <col style={{ width: '20%' }} />
+                                    </colgroup>
+                                    <tbody>
+                                      <tr>
+                                        {/* Only render spec1 cell if it has content OR has merge info */}
+                                        {(hasMerge || !spec1Empty) && (
+                                          <td 
+                                            className="border-r border-gray-400 p-1 align-top"
+                                          >
+                                            <textarea
+                                              value={(item as any).spec1 || ''}
+                                              onChange={(e) => updateItem("technicalParticulars", item.id, "spec1", e.target.value)}
+                                              disabled={!isEditing}
+                                              rows={1}
+                                              className={`w-full text-xs px-1 py-1 resize-none overflow-hidden border-0 focus:outline-none focus:ring-1 focus:ring-blue-400 ${!isEditing ? 'bg-transparent' : 'bg-white'}`}
+                                              style={{ minHeight: '24px' }}
+                                              onInput={(e) => {
+                                                const target = e.target as HTMLTextAreaElement;
+                                                target.style.height = 'auto';
+                                                target.style.height = target.scrollHeight + 'px';
+                                              }}
+                                            />
+                                          </td>
+                                        )}
+                                        {/* Skip spec1 cell if empty (part of merged cell) */}
+                                        <td className="border-r border-gray-400 p-1 align-top">
+                                          <textarea
+                                            value={(item as any).spec2 || ''}
+                                            onChange={(e) => updateItem("technicalParticulars", item.id, "spec2", e.target.value)}
+                                            disabled={!isEditing}
+                                            rows={1}
+                                            className={`w-full text-xs px-1 py-1 resize-none overflow-hidden border-0 focus:outline-none focus:ring-1 focus:ring-blue-400 ${!isEditing ? 'bg-transparent' : 'bg-white'}`}
+                                            style={{ minHeight: '24px' }}
+                                            onInput={(e) => {
+                                              const target = e.target as HTMLTextAreaElement;
+                                              target.style.height = 'auto';
+                                              target.style.height = target.scrollHeight + 'px';
+                                            }}
+                                          />
+                                        </td>
+                                        <td className="border-r border-gray-400 p-1 align-top">
+                                          <textarea
+                                            value={(item as any).spec3 || ''}
+                                            onChange={(e) => updateItem("technicalParticulars", item.id, "spec3", e.target.value)}
+                                            disabled={!isEditing}
+                                            rows={1}
+                                            className={`w-full text-xs px-1 py-1 resize-none overflow-hidden border-0 focus:outline-none focus:ring-1 focus:ring-blue-400 ${!isEditing ? 'bg-transparent' : 'bg-white'}`}
+                                            style={{ minHeight: '24px' }}
+                                            onInput={(e) => {
+                                              const target = e.target as HTMLTextAreaElement;
+                                              target.style.height = 'auto';
+                                              target.style.height = target.scrollHeight + 'px';
+                                            }}
+                                          />
+                                        </td>
+                                        <td className="p-1 align-top">
+                                          <textarea
+                                            value={(item as any).spec4 || ''}
+                                            onChange={(e) => updateItem("technicalParticulars", item.id, "spec4", e.target.value)}
+                                            disabled={!isEditing}
+                                            rows={1}
+                                            className={`w-full text-xs px-1 py-1 resize-none overflow-hidden border-0 focus:outline-none focus:ring-1 focus:ring-blue-400 ${!isEditing ? 'bg-transparent' : 'bg-white'}`}
+                                            style={{ minHeight: '24px' }}
+                                            onInput={(e) => {
+                                              const target = e.target as HTMLTextAreaElement;
+                                              target.style.height = 'auto';
+                                              target.style.height = target.scrollHeight + 'px';
+                                            }}
+                                          />
+                                        </td>
+                                      </tr>
+                                    </tbody>
+                                  </table>
+                                );
+                              })()}
+                            </td>
+                            <td className={`${tdClass} p-1 border border-gray-400 align-top`}>
+                              <textarea
+                                value={(item as any).vendorPTX || ''}
+                                onChange={(e) => updateItem("technicalParticulars", item.id, "vendorPTX", e.target.value)}
+                                disabled={!isEditing}
+                                rows={1}
+                                className={`w-full text-xs px-1 py-1 resize-none overflow-hidden border-0 focus:outline-none focus:ring-1 focus:ring-blue-400 ${!isEditing ? 'bg-transparent' : 'bg-white'}`}
+                                style={{ minHeight: '24px' }}
+                                onInput={(e) => {
+                                  const target = e.target as HTMLTextAreaElement;
+                                  target.style.height = 'auto';
+                                  target.style.height = target.scrollHeight + 'px';
+                                }}
+                              />
+                            </td>
+                            <td className={`${tdClass} p-1 border border-gray-400 align-top`}>
+                              <textarea
+                                value={(item as any).vendorPTY || ''}
+                                onChange={(e) => updateItem("technicalParticulars", item.id, "vendorPTY", e.target.value)}
+                                disabled={!isEditing}
+                                rows={1}
+                                className={`w-full text-xs px-1 py-1 resize-none overflow-hidden border-0 focus:outline-none focus:ring-1 focus:ring-blue-400 ${!isEditing ? 'bg-transparent' : 'bg-white'}`}
+                                style={{ minHeight: '24px' }}
+                                onInput={(e) => {
+                                  const target = e.target as HTMLTextAreaElement;
+                                  target.style.height = 'auto';
+                                  target.style.height = target.scrollHeight + 'px';
+                                }}
+                              />
+                            </td>
+                            <td className={`${tdClass} p-1 border border-gray-400 align-top`}>
+                              <textarea
+                                value={(item as any).vendorPTZ || ''}
+                                onChange={(e) => updateItem("technicalParticulars", item.id, "vendorPTZ", e.target.value)}
+                                disabled={!isEditing}
+                                rows={1}
+                                className={`w-full text-xs px-1 py-1 resize-none overflow-hidden border-0 focus:outline-none focus:ring-1 focus:ring-blue-400 ${!isEditing ? 'bg-transparent' : 'bg-white'}`}
+                                style={{ minHeight: '24px' }}
+                                onInput={(e) => {
+                                  const target = e.target as HTMLTextAreaElement;
+                                  target.style.height = 'auto';
+                                  target.style.height = target.scrollHeight + 'px';
+                                }}
+                              />
+                            </td>
+                            <td className={`${tdClass} p-1 border border-gray-400 align-top`}>
+                              <textarea
+                                value={(item as any).keterangan || ''}
+                                onChange={(e) => updateItem("technicalParticulars", item.id, "keterangan", e.target.value)}
+                                disabled={!isEditing}
+                                rows={1}
+                                className={`w-full text-xs px-1 py-1 resize-none overflow-hidden border-0 focus:outline-none focus:ring-1 focus:ring-blue-400 ${!isEditing ? 'bg-transparent' : 'bg-white'}`}
+                                style={{ minHeight: '24px' }}
+                                onInput={(e) => {
+                                  const target = e.target as HTMLTextAreaElement;
+                                  target.style.height = 'auto';
+                                  target.style.height = target.scrollHeight + 'px';
+                                }}
+                              />
+                            </td>
+                            {isEditing && (
+                              <td className={`${tdClass} text-center`}>
+                                <button
+                                  type="button"
+                                  onClick={() => removeItem("technicalParticulars", item.id)}
+                                  className="text-red-500 hover:text-red-700"
+                                >
+                                  <Trash2 size={18} />
+                                </button>
+                              </td>
+                            )}
+                          </tr>
+                        );
+                      }
+                      
+                      // Regular data rows for old Battery format
+                      if (isBatteryFormat) {
+                        return (
+                          <tr key={item.id} className={rowBgClass}>
+                            <td className={`${tdClass} text-base ${textColorClass} font-medium text-center`}>
+                              {item.id}
+                            </td>
+                            <td className={tdClass}>
+                              <input
+                                type="text"
+                                value={item.specificationRequirements || ''}
+                                onChange={(e) => updateItem("technicalParticulars", item.id, "specificationRequirements", e.target.value)}
+                                disabled={!isEditing}
+                                className={inputClass}
+                              />
+                            </td>
+                            <td className={tdClass}>
+                              <input
+                                type="text"
+                                value={item.vendorPTX || ''}
+                                onChange={(e) => updateItem("technicalParticulars", item.id, "vendorPTX", e.target.value)}
+                                disabled={!isEditing}
+                                className={inputClass}
+                              />
+                            </td>
+                            <td className={tdClass}>
+                              <input
+                                type="text"
+                                value={item.vendorPTY || ''}
+                                onChange={(e) => updateItem("technicalParticulars", item.id, "vendorPTY", e.target.value)}
+                                disabled={!isEditing}
+                                className={inputClass}
+                              />
+                            </td>
+                            <td className={tdClass}>
+                              <input
+                                type="text"
+                                value={item.vendorPTZ || ''}
+                                onChange={(e) => updateItem("technicalParticulars", item.id, "vendorPTZ", e.target.value)}
+                                disabled={!isEditing}
+                                className={inputClass}
+                              />
+                            </td>
+                            <td className={tdClass}>
+                              <input
+                                type="text"
+                                value={item.keterangan || ''}
+                                onChange={(e) => updateItem("technicalParticulars", item.id, "keterangan", e.target.value)}
+                                disabled={!isEditing}
+                                className={inputClass}
+                              />
+                            </td>
+                            {isEditing && (
+                              <td className={`${tdClass} text-center`}>
+                                <button
+                                  type="button"
+                                  onClick={() => removeItem("technicalParticulars", item.id)}
+                                  className="text-red-500 hover:text-red-700"
+                                >
+                                  <Trash2 size={18} />
+                                </button>
+                              </td>
+                            )}
+                          </tr>
+                        );
+                      }
+                      
+                      // Regular data rows for other formats
                       return (
                         <tr key={item.id} className={rowBgClass}>
                           <td className={`${tdClass} text-base ${textColorClass} font-medium text-center`}>
@@ -387,7 +956,7 @@ export default function Tab6Lampiran({ formData, onChange, isEditing }: TabProps
                   })()}
                   {(formData.technicalParticulars || []).length === 0 && (
                     <tr>
-                      <td colSpan={isEditing ? columns.length + 2 : columns.length + 1} className="px-6 py-8 text-center text-base text-gray-500">
+                      <td colSpan={isEditing ? getTPGColumns().length + 2 : getTPGColumns().length + 1} className="px-6 py-8 text-center text-base text-gray-500">
                         Belum ada data
                       </td>
                     </tr>
@@ -412,6 +981,8 @@ export default function Tab6Lampiran({ formData, onChange, isEditing }: TabProps
           >
             <Plus size={16} className="mr-1" /> Tambah Baris
           </button>
+        )}
+          </>
         )}
         </div>
         )}

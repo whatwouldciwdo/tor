@@ -797,52 +797,651 @@ function generateWorkStagesTable(workStagesData: any): Table {
 
 // === TAB 6 LAMPIRAN TABLE GENERATORS ===
 
+// ============================================================
+// CUSTOM BATTERY TABLE GENERATOR - Following exact spec layout
+// ============================================================
+
+// Column widths for Battery table (in percentage)
+const BATTERY_COL_WIDTHS = {
+  no: 3,           // ~48px
+  spec: 52,        // ~820px
+  ptx: 8,          // ~120px
+  pty: 8,          // ~120px
+  ptz: 8,          // ~120px
+  keterangan: 16   // ~260px
+};
+
+// Font sizes for Battery export
+const BATTERY_FONT = {
+  header: 14,      // 7pt
+  content: 12,     // 6pt
+  nested: 10       // 5pt for nested content
+};
+
+// Cell margin for Battery
+const BATTERY_MARGIN = { top: 30, bottom: 30, left: 40, right: 40 };
+const BATTERY_MARGIN_SMALL = { top: 20, bottom: 20, left: 30, right: 30 };
+
+// Create nested grid table inside a cell
+function createNestedGrid(columns: string[]): Table {
+  const cells = columns.map((text, idx) => 
+    new TableCell({
+      children: [new Paragraph({
+        children: [new TextRun({
+          text: text,
+          font: "Arial",
+          size: BATTERY_FONT.nested,
+          color: "000000"
+        })]
+      })],
+      margins: BATTERY_MARGIN_SMALL,
+      borders: {
+        left: idx > 0 ? { style: BorderStyle.SINGLE, size: 1, color: "888888" } : { style: BorderStyle.NIL },
+        right: { style: BorderStyle.NIL },
+        top: { style: BorderStyle.NIL },
+        bottom: { style: BorderStyle.NIL }
+      }
+    })
+  );
+  
+  return new Table({
+    rows: [new TableRow({ children: cells })],
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    borders: {
+      top: { style: BorderStyle.NIL },
+      bottom: { style: BorderStyle.NIL },
+      left: { style: BorderStyle.NIL },
+      right: { style: BorderStyle.NIL },
+      insideHorizontal: { style: BorderStyle.NIL },
+      insideVertical: { style: BorderStyle.NIL }
+    }
+  });
+}
+
+// Create a regular data row for Battery table
+function createBatteryRow(no: string, specContent: Table | Paragraph | string, dashed: boolean = false): TableRow {
+  const borderStyle = dashed ? BorderStyle.DASHED : BorderStyle.SINGLE;
+  
+  // Handle spec content - can be Table, Paragraph, or string
+  let specChildren: (Table | Paragraph)[];
+  if (typeof specContent === 'string') {
+    specChildren = [new Paragraph({
+      children: [new TextRun({
+        text: specContent,
+        font: "Arial",
+        size: BATTERY_FONT.content,
+        color: "000000"
+      })]
+    })];
+  } else if (specContent instanceof Table) {
+    specChildren = [specContent];
+  } else {
+    specChildren = [specContent];
+  }
+  
+  return new TableRow({
+    children: [
+      // NO column
+      new TableCell({
+        children: [new Paragraph({
+          children: [new TextRun({ text: no, font: "Arial", size: BATTERY_FONT.content, color: "000000" })],
+          alignment: AlignmentType.CENTER
+        })],
+        width: { size: BATTERY_COL_WIDTHS.no, type: WidthType.PERCENTAGE },
+        margins: BATTERY_MARGIN
+      }),
+      // SPESIFICATION REQUIREMENTS column
+      new TableCell({
+        children: specChildren,
+        width: { size: BATTERY_COL_WIDTHS.spec, type: WidthType.PERCENTAGE },
+        margins: BATTERY_MARGIN
+      }),
+      // PT. X column
+      new TableCell({
+        children: [new Paragraph({ children: [new TextRun({ text: "", font: "Arial", size: BATTERY_FONT.content })] })],
+        width: { size: BATTERY_COL_WIDTHS.ptx, type: WidthType.PERCENTAGE },
+        margins: BATTERY_MARGIN,
+        borders: {
+          top: { style: borderStyle, size: 1, color: "000000" }
+        }
+      }),
+      // PT. Y column
+      new TableCell({
+        children: [new Paragraph({ children: [new TextRun({ text: "", font: "Arial", size: BATTERY_FONT.content })] })],
+        width: { size: BATTERY_COL_WIDTHS.pty, type: WidthType.PERCENTAGE },
+        margins: BATTERY_MARGIN,
+        borders: {
+          top: { style: borderStyle, size: 1, color: "000000" }
+        }
+      }),
+      // PT. Z column
+      new TableCell({
+        children: [new Paragraph({ children: [new TextRun({ text: "", font: "Arial", size: BATTERY_FONT.content })] })],
+        width: { size: BATTERY_COL_WIDTHS.ptz, type: WidthType.PERCENTAGE },
+        margins: BATTERY_MARGIN,
+        borders: {
+          top: { style: borderStyle, size: 1, color: "000000" }
+        }
+      }),
+      // KETERANGAN column
+      new TableCell({
+        children: [new Paragraph({ children: [new TextRun({ text: "", font: "Arial", size: BATTERY_FONT.content })] })],
+        width: { size: BATTERY_COL_WIDTHS.keterangan, type: WidthType.PERCENTAGE },
+        margins: BATTERY_MARGIN,
+        borders: {
+          top: { style: borderStyle, size: 1, color: "000000" }
+        }
+      })
+    ]
+  });
+}
+
+// Create section header row (text only in SPEC column)
+function createBatterySectionRow(no: string, sectionTitle: string): TableRow {
+  return new TableRow({
+    children: [
+      new TableCell({
+        children: [new Paragraph({
+          children: [new TextRun({ text: no, font: "Arial", size: BATTERY_FONT.content, bold: true, color: "000000" })],
+          alignment: AlignmentType.CENTER
+        })],
+        width: { size: BATTERY_COL_WIDTHS.no, type: WidthType.PERCENTAGE },
+        margins: BATTERY_MARGIN,
+        shading: { fill: "F3F4F6" }
+      }),
+      new TableCell({
+        children: [new Paragraph({
+          children: [new TextRun({ text: sectionTitle, font: "Arial", size: BATTERY_FONT.content, bold: true, color: "000000" })],
+          alignment: AlignmentType.CENTER
+        })],
+        width: { size: BATTERY_COL_WIDTHS.spec, type: WidthType.PERCENTAGE },
+        margins: BATTERY_MARGIN,
+        shading: { fill: "F3F4F6" }
+      }),
+      new TableCell({
+        children: [new Paragraph({})],
+        width: { size: BATTERY_COL_WIDTHS.ptx, type: WidthType.PERCENTAGE },
+        shading: { fill: "F3F4F6" }
+      }),
+      new TableCell({
+        children: [new Paragraph({})],
+        width: { size: BATTERY_COL_WIDTHS.pty, type: WidthType.PERCENTAGE },
+        shading: { fill: "F3F4F6" }
+      }),
+      new TableCell({
+        children: [new Paragraph({})],
+        width: { size: BATTERY_COL_WIDTHS.ptz, type: WidthType.PERCENTAGE },
+        shading: { fill: "F3F4F6" }
+      }),
+      new TableCell({
+        children: [new Paragraph({})],
+        width: { size: BATTERY_COL_WIDTHS.keterangan, type: WidthType.PERCENTAGE },
+        shading: { fill: "F3F4F6" }
+      })
+    ]
+  });
+}
+
+// Create the "Tipe Sel" nested table (8 rows, 3 columns)
+function createTipeSelTable(): Table {
+  const rows: TableRow[] = [];
+  
+  // Row 1: OPzS (spans all 3 columns)
+  rows.push(new TableRow({
+    children: [
+      new TableCell({
+        children: [new Paragraph({
+          children: [new TextRun({ text: "OPzS", font: "Arial", size: BATTERY_FONT.nested, bold: true, color: "000000" })]
+        })],
+        columnSpan: 3,
+        margins: BATTERY_MARGIN_SMALL
+      })
+    ]
+  }));
+  
+  // Rows 2-8: 3-column data
+  const data = [
+    ["Plate", "Positif: TUBULAR", "Negatif: GRID"],
+    ["Lead Alloying", "Low Antimony", "0,5 ~ 1 %"],
+    ["Container", "High Quality Transparent Electrolyte Proof Material (AcrylNitrile-Styrene)", "Black Color container is NOT APPROVED"],
+    ["Number of Poles Terminal", "Positif: Min. 3 pcs", "Negatif: Min. 3 pcs"],
+    ["Electrolyte Spesific Grafity (SG)", "1.22 atau 1.24", "At 25 °C"],
+    ["Full Charge Electrolyte Specific Gravity (SG)", "1,27", "At 25 °C"],
+    ["Design Life Time", "Min 20 years (Certified Letter by Manufacture)", "At 20 °C"]
+  ];
+  
+  data.forEach(row => {
+    rows.push(new TableRow({
+      children: row.map((text, idx) => 
+        new TableCell({
+          children: [new Paragraph({
+            children: [new TextRun({ text, font: "Arial", size: BATTERY_FONT.nested, color: "000000" })]
+          })],
+          margins: BATTERY_MARGIN_SMALL,
+          borders: {
+            left: idx > 0 ? { style: BorderStyle.SINGLE, size: 1, color: "CCCCCC" } : undefined
+          }
+        })
+      )
+    }));
+  });
+  
+  return new Table({
+    rows,
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    borders: {
+      top: { style: BorderStyle.SINGLE, size: 1, color: "888888" },
+      bottom: { style: BorderStyle.SINGLE, size: 1, color: "888888" },
+      left: { style: BorderStyle.SINGLE, size: 1, color: "888888" },
+      right: { style: BorderStyle.SINGLE, size: 1, color: "888888" },
+      insideHorizontal: { style: BorderStyle.SINGLE, size: 1, color: "CCCCCC" },
+      insideVertical: { style: BorderStyle.SINGLE, size: 1, color: "CCCCCC" }
+    }
+  });
+}
+
+// Create complete Battery spec cell with "Tipe Sel" label and nested table
+function createTipeSelCell(): TableCell {
+  // This creates a special cell with "Tipe Sel" on left and nested table on right
+  const innerTable = new Table({
+    rows: [new TableRow({
+      children: [
+        new TableCell({
+          children: [new Paragraph({
+            children: [new TextRun({ 
+              text: "Tipe Sel", 
+              font: "Arial", 
+              size: BATTERY_FONT.content, 
+              bold: true, 
+              color: "000000" 
+            })],
+            alignment: AlignmentType.CENTER
+          })],
+          width: { size: 15, type: WidthType.PERCENTAGE },
+          verticalAlign: VerticalAlign.CENTER,
+          margins: BATTERY_MARGIN_SMALL
+        }),
+        new TableCell({
+          children: [createTipeSelTable()],
+          width: { size: 85, type: WidthType.PERCENTAGE },
+          margins: { top: 0, bottom: 0, left: 0, right: 0 }
+        })
+      ]
+    })],
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    borders: {
+      top: { style: BorderStyle.NIL },
+      bottom: { style: BorderStyle.NIL },
+      left: { style: BorderStyle.NIL },
+      right: { style: BorderStyle.NIL }
+    }
+  });
+  
+  return new TableCell({
+    children: [innerTable],
+    width: { size: BATTERY_COL_WIDTHS.spec, type: WidthType.PERCENTAGE },
+    margins: { top: 0, bottom: 0, left: 0, right: 0 },
+    rowSpan: 8 // Spans rows 9-16
+  });
+}
+
+// Main Battery table generator
+function generateBatteryTable(): Table {
+  const rows: TableRow[] = [];
+  
+  // ============ HEADER ROWS ============
+  // Row 1 of header: NO | SPESIFICATION REQUIREMENTS | NAMA VENDOR (colspan 3) | KETERANGAN
+  rows.push(new TableRow({
+    children: [
+      new TableCell({
+        children: [new Paragraph({
+          children: [new TextRun({ text: "NO", bold: true, font: "Arial", size: BATTERY_FONT.header, color: "000000" })],
+          alignment: AlignmentType.CENTER
+        })],
+        width: { size: BATTERY_COL_WIDTHS.no, type: WidthType.PERCENTAGE },
+        rowSpan: 2,
+        verticalAlign: VerticalAlign.CENTER,
+        margins: BATTERY_MARGIN,
+        shading: { fill: "CFE2F3" }
+      }),
+      new TableCell({
+        children: [new Paragraph({
+          children: [new TextRun({ text: "SPESIFICATION REQUIREMENTS", bold: true, font: "Arial", size: BATTERY_FONT.header, color: "000000" })],
+          alignment: AlignmentType.CENTER
+        })],
+        width: { size: BATTERY_COL_WIDTHS.spec, type: WidthType.PERCENTAGE },
+        rowSpan: 2,
+        verticalAlign: VerticalAlign.CENTER,
+        margins: BATTERY_MARGIN,
+        shading: { fill: "CFE2F3" }
+      }),
+      new TableCell({
+        children: [new Paragraph({
+          children: [new TextRun({ text: "NAMA VENDOR", bold: true, font: "Arial", size: BATTERY_FONT.header, color: "000000" })],
+          alignment: AlignmentType.CENTER
+        })],
+        columnSpan: 3,
+        margins: BATTERY_MARGIN,
+        shading: { fill: "CFE2F3" }
+      }),
+      new TableCell({
+        children: [new Paragraph({
+          children: [new TextRun({ text: "KETERANGAN", bold: true, font: "Arial", size: BATTERY_FONT.header, color: "000000" })],
+          alignment: AlignmentType.CENTER
+        })],
+        width: { size: BATTERY_COL_WIDTHS.keterangan, type: WidthType.PERCENTAGE },
+        rowSpan: 2,
+        verticalAlign: VerticalAlign.CENTER,
+        margins: BATTERY_MARGIN,
+        shading: { fill: "CFE2F3" }
+      })
+    ]
+  }));
+  
+  // Row 2 of header: PT. X | PT. Y | PT. Z
+  rows.push(new TableRow({
+    children: [
+      new TableCell({
+        children: [new Paragraph({
+          children: [new TextRun({ text: "PT. X", bold: true, font: "Arial", size: BATTERY_FONT.header, color: "000000" })],
+          alignment: AlignmentType.CENTER
+        })],
+        width: { size: BATTERY_COL_WIDTHS.ptx, type: WidthType.PERCENTAGE },
+        margins: BATTERY_MARGIN,
+        shading: { fill: "CFE2F3" }
+      }),
+      new TableCell({
+        children: [new Paragraph({
+          children: [new TextRun({ text: "PT. Y", bold: true, font: "Arial", size: BATTERY_FONT.header, color: "000000" })],
+          alignment: AlignmentType.CENTER
+        })],
+        width: { size: BATTERY_COL_WIDTHS.pty, type: WidthType.PERCENTAGE },
+        margins: BATTERY_MARGIN,
+        shading: { fill: "CFE2F3" }
+      }),
+      new TableCell({
+        children: [new Paragraph({
+          children: [new TextRun({ text: "PT. Z", bold: true, font: "Arial", size: BATTERY_FONT.header, color: "000000" })],
+          alignment: AlignmentType.CENTER
+        })],
+        width: { size: BATTERY_COL_WIDTHS.ptz, type: WidthType.PERCENTAGE },
+        margins: BATTERY_MARGIN,
+        shading: { fill: "CFE2F3" }
+      })
+    ]
+  }));
+  
+  // ============ GENERAL SECTION (rows 1-4) ============
+  rows.push(createBatterySectionRow("1", "GENERAL"));
+  rows.push(createBatteryRow("2", createNestedGrid(["Kesuaian Temperature", "Temperatur (°C): 33", "Min: 28", "Max: 35"]), true));
+  rows.push(createBatteryRow("3", createNestedGrid(["Kesuaian Zona Gempa", "Zona : 3"]), true));
+  rows.push(createBatteryRow("4", "", true));
+  
+  // ============ APPROVAL STANDARDS SECTION (rows 5-7) ============
+  rows.push(createBatterySectionRow("5", "APPROVAL STANDARDS"));
+  rows.push(createBatteryRow("6", createNestedGrid(["Standard", "ANSI / IEEE / IEC / JIS / DIN/VDE"]), true));
+  rows.push(createBatteryRow("7", "", true));
+  
+  // ============ STATIONARY BATTERY SPECIFICATION (rows 8-22) ============
+  rows.push(createBatterySectionRow("8", "STATIONARY BATTERY SPECIFICATION"));
+  
+  // Row 9 - Special row with Tipe Sel (rowSpan=8)
+  rows.push(new TableRow({
+    children: [
+      new TableCell({
+        children: [new Paragraph({
+          children: [new TextRun({ text: "9", font: "Arial", size: BATTERY_FONT.content, color: "000000" })],
+          alignment: AlignmentType.CENTER
+        })],
+        width: { size: BATTERY_COL_WIDTHS.no, type: WidthType.PERCENTAGE },
+        margins: BATTERY_MARGIN
+      }),
+      createTipeSelCell(), // This has rowSpan=8
+      new TableCell({ children: [new Paragraph({})], margins: BATTERY_MARGIN }),
+      new TableCell({ children: [new Paragraph({})], margins: BATTERY_MARGIN }),
+      new TableCell({ children: [new Paragraph({})], margins: BATTERY_MARGIN }),
+      new TableCell({ children: [new Paragraph({})], margins: BATTERY_MARGIN })
+    ]
+  }));
+  
+  // Rows 10-16 (only NO and vendor columns, SPEC column is merged)
+  for (let i = 10; i <= 16; i++) {
+    rows.push(new TableRow({
+      children: [
+        new TableCell({
+          children: [new Paragraph({
+            children: [new TextRun({ text: i.toString(), font: "Arial", size: BATTERY_FONT.content, color: "000000" })],
+            alignment: AlignmentType.CENTER
+          })],
+          margins: BATTERY_MARGIN
+        }),
+        new TableCell({ children: [new Paragraph({})], margins: BATTERY_MARGIN }),
+        new TableCell({ children: [new Paragraph({})], margins: BATTERY_MARGIN }),
+        new TableCell({ children: [new Paragraph({})], margins: BATTERY_MARGIN }),
+        new TableCell({ children: [new Paragraph({})], margins: BATTERY_MARGIN })
+      ]
+    }));
+  }
+  
+  // Rows 17-22
+  rows.push(createBatteryRow("17", createNestedGrid(["Minimum Kapasitas (Ampere Hours):", "2000 Ah (C10)"]), true));
+  rows.push(createBatteryRow("18", createNestedGrid(["Tegangan Nominal/Cell : 2 Volt", "Tegangan Float Cell : 2,2 Volt", "Tegangan Equalize (Boost) Cell : 2,25 V"]), true));
+  rows.push(createBatteryRow("19", createNestedGrid(["End Voltage per Cell (Battery Design)", "Minimum 1,80 Volts", "End Voltage yang menyatakan battery sudah rusak."]), true));
+  rows.push(createBatteryRow("20", createNestedGrid(["End Voltage per Cell at Commissioning/ Acceptance Test", "Minimum 1,85 Volts", "Metode Test C10 (200 A 10 jam). Test dilakukan Vendor termasuk alat dummy load, charging, dll disediakan oleh Vendor."]), true));
+  rows.push(createBatteryRow("21", createNestedGrid(["Metode Pengiriman:", "Kering", "Dry Pre-Charged for Un-Limited Time Storage"]), true));
+  rows.push(createBatteryRow("22", createNestedGrid(["Jumlah Discharge Cycles", "Minimal 1000 Cycle (Certified Letter by Manufacture)"]), true));
+  
+  // ============ LOAD CHARACTERISTIC SECTION (rows 23-25) ============
+  rows.push(createBatteryRow("23", "", true));
+  rows.push(createBatterySectionRow("24", "KESESUAIAN DENGAN LOAD CHARACTERISTIC (End Voltage 1,80 VPC Back-Up Time 10 hours)"));
+  
+  // Row 25: Chart placeholder (will add image later)
+  rows.push(createBatteryRow("25", new Paragraph({
+    children: [new TextRun({ 
+      text: "Baterai harus dapat memenuhi load karakteristik berikut:\n[Lihat diagram Load Characteristic A-B-C-D]", 
+      font: "Arial", 
+      size: BATTERY_FONT.content, 
+      color: "000000" 
+    })]
+  }), true));
+  
+  // ============ BATTERY RACK SPECIFICATION (rows 26-29) ============
+  rows.push(createBatteryRow("26", "", true));
+  rows.push(createBatterySectionRow("27", "BATTERY RACK SPECIFICATION"));
+  rows.push(createBatteryRow("28", createNestedGrid(["MATERIAL", "CARBON STEEL DICAT DENGAN ANTI ACID COATING DAN DI BAWAH BATTERY DILENGKAPI DENGAN INSULATORS, CROSS BEAMS DAN WOOD STRIPS", "ANTI SEISMIC BATTERY RACK (TAHAN GEMPA)"]), true));
+  rows.push(createBatteryRow("29", "", true));
+  
+  // ============ ACCESSORIES SECTION (rows 30-35) ============
+  rows.push(createBatterySectionRow("30", "ACCESSORIES"));
+  rows.push(createBatteryRow("31", createNestedGrid(["Hydrometer Portabel", "Diperlukan 2 buah"]), true));
+  rows.push(createBatteryRow("32", createNestedGrid(["Hydrometer Vent-Mounted", "Diperlukan 2 buah"]), true));
+  rows.push(createBatteryRow("33", createNestedGrid(["Thermometer Vent-Mounted", "Diperlukan sebanyak jumlah battery yang diminta (±110 buah)"]), true));
+  rows.push(createBatteryRow("34", createNestedGrid(["Pengangkat Sel Portable (Lifting Truck)", "Diperlukan 1 set"]), true));
+  rows.push(createBatteryRow("35", createNestedGrid(["Portable Charger smooth selector 2 - 12 Volt continous current 200 Ampere", "Diperlukan 1 set"]), true));
+  
+  return new Table({
+    rows,
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    borders: {
+      top: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+      bottom: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+      left: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+      right: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+      insideHorizontal: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+      insideVertical: { style: BorderStyle.SINGLE, size: 1, color: "000000" }
+    }
+  });
+}
+
 // Helper to generate Technical Particular & Guarantee (TPG) Table
 function generateTpgTable(items: any[]): Table {
-  const cellMargin = { top: 60, bottom: 60, left: 50, right: 50 }; // Compact margins for tighter spacing
-  const headerSize = 16; // 8pt - compact but readable
-  const contentSize = 14; // 7pt - compact but readable
+  const cellMargin = { top: 40, bottom: 40, left: 30, right: 30 }; // Reduced margins for page fitting
+  const headerSize = 14; // 7pt - optimized for page fitting
+  const contentSize = 12; // 6pt - optimized for page fitting
 
-  // Detect column structure from first item
-  const firstItem = items.length > 0 ? items[0] : null;
-  const hasNewFormat = firstItem && 'description' in firstItem;
+  // Detect column structure from first data item (skip headers)
+  const firstDataItem = items.find(item => {
+    const keys = Object.keys(item).filter(k => k !== 'id');
+    return keys.length > 1; // Has more than just description
+  });
+  
+  // Detect Battery format (has specificationRequirements, vendorPTX, vendorPTY, vendorPTZ, keterangan)
+  const isBatteryFormat = firstDataItem && 'specificationRequirements' in firstDataItem && 'vendorPTX' in firstDataItem;
+  
+  // Detect multi-column Battery format (has spec1, spec2, spec3, spec4, vendorPTX)
+  const isMultiColumnBattery = firstDataItem && 'spec1' in firstDataItem && 'vendorPTX' in firstDataItem;
+  
+  // Detect AVR format (has unit, required, proposedGuaranteed)
+  const isAvrFormat = firstDataItem && 'unit' in firstDataItem && 'required' in firstDataItem && 'proposedGuaranteed' in firstDataItem;
+  
+  // Detect Arrester format (has description, specified, proposedGuarantee)
+  const isArresterFormat = firstDataItem && 'description' in firstDataItem && 'specified' in firstDataItem;
   
   // Define columns based on format
-  const columns = hasNewFormat
-    ? [
-        { key: 'description', label: 'DESCRIPTION', width: 40 },
-        { key: 'specified', label: 'SPECIFIED', width: 30 },
-        { key: 'proposedGuarantee', label: 'PROPOSED & GUARANTEE', width: 30 }
-      ]
-    : [
-        { key: 'specification', label: 'Spesifikasi', width: 35 },
-        { key: 'ownerRequest', label: 'Owner Request', width: 30 },
-        { key: 'vendorProposed', label: 'Vendor Proposed & Guarantee', width: 30 }
-      ];
+  let columns: { key: string; label: string; width: number }[];
+  
+  if (isBatteryFormat || isMultiColumnBattery) {
+    columns = [
+      { key: 'specificationRequirements', label: 'SPESIFICATION REQUIREMENTS', width: 30 },
+      { key: 'vendorPTX', label: 'PT. X', width: 15 },
+      { key: 'vendorPTY', label: 'PT. Y', width: 15 },
+      { key: 'vendorPTZ', label: 'PT. Z', width: 15 },
+      { key: 'keterangan', label: 'KETERANGAN', width: 20 }
+    ];
+  } else if (isAvrFormat) {
+    columns = [
+      { key: 'description', label: 'DESCRIPTION', width: 30 },
+      { key: 'unit', label: 'UNIT', width: 8 },
+      { key: 'required', label: 'REQUIRED', width: 17 },
+      { key: 'proposedGuaranteed', label: 'PROPOSED AND GUARANTEED', width: 25 },
+      { key: 'remarks', label: 'REMARKS', width: 15 }
+    ];
+  } else if (isArresterFormat) {
+    columns = [
+      { key: 'description', label: 'DESCRIPTION', width: 40 },
+      { key: 'specified', label: 'SPECIFIED', width: 30 },
+      { key: 'proposedGuarantee', label: 'PROPOSED & GUARANTEE', width: 25 }
+    ];
+  } else {
+    columns = [
+      { key: 'specification', label: 'Spesifikasi', width: 35 },
+      { key: 'ownerRequest', label: 'Owner Request', width: 30 },
+      { key: 'vendorProposed', label: 'Vendor Proposed & Guarantee', width: 30 }
+    ];
+  }
 
-  // Header row
-  const headerCells = [
-    new TableCell({ 
-      children: [new Paragraph({ 
-        children: [new TextRun({ text: "No.", bold: true, font: "Arial", size: headerSize, color: "000000" })], 
-        alignment: AlignmentType.CENTER 
-      })], 
-      width: { size: 5, type: WidthType.PERCENTAGE }, 
-      margins: cellMargin, 
-      shading: { fill: "F3F4F6", color: "auto" } // Light gray header
-    }),
-    ...columns.map(col => 
+  // Header row(s) - Battery format needs two rows with merged "NAMA VENDOR" header
+  let headerRows: TableRow[];
+  
+  if (isBatteryFormat || isMultiColumnBattery) {
+    // Row 1: NO (rowspan 2) | SPESIFICATION REQUIREMENTS (rowspan 2) | NAMA VENDOR (colspan 3) | KETERANGAN (rowspan 2)
+    const headerRow1Cells = [
+      new TableCell({
+        children: [new Paragraph({
+          children: [new TextRun({ text: "NO", bold: true, font: "Arial", size: headerSize, color: "000000" })],
+          alignment: AlignmentType.CENTER
+        })],
+        width: { size: 5, type: WidthType.PERCENTAGE },
+        margins: cellMargin,
+        rowSpan: 2,
+        verticalAlign: VerticalAlign.CENTER,
+        shading: { fill: "F3F4F6", color: "auto" }
+      }),
+      new TableCell({
+        children: [new Paragraph({
+          children: [new TextRun({ text: "SPESIFICATION REQUIREMENTS", bold: true, font: "Arial", size: headerSize, color: "000000" })],
+          alignment: AlignmentType.CENTER
+        })],
+        width: { size: 30, type: WidthType.PERCENTAGE },
+        margins: cellMargin,
+        rowSpan: 2,
+        verticalAlign: VerticalAlign.CENTER,
+        shading: { fill: "F3F4F6", color: "auto" }
+      }),
+      new TableCell({
+        children: [new Paragraph({
+          children: [new TextRun({ text: "NAMA VENDOR", bold: true, font: "Arial", size: headerSize, color: "000000" })],
+          alignment: AlignmentType.CENTER
+        })],
+        columnSpan: 3,
+        margins: cellMargin,
+        shading: { fill: "F3F4F6", color: "auto" }
+      }),
+      new TableCell({
+        children: [new Paragraph({
+          children: [new TextRun({ text: "KETERANGAN", bold: true, font: "Arial", size: headerSize, color: "000000" })],
+          alignment: AlignmentType.CENTER
+        })],
+        width: { size: 20, type: WidthType.PERCENTAGE },
+        margins: cellMargin,
+        rowSpan: 2,
+        verticalAlign: VerticalAlign.CENTER,
+        shading: { fill: "F3F4F6", color: "auto" }
+      })
+    ];
+
+    // Row 2: PT. X | PT. Y | PT. Z
+    const headerRow2Cells = [
+      new TableCell({
+        children: [new Paragraph({
+          children: [new TextRun({ text: "PT. X", bold: true, font: "Arial", size: headerSize, color: "000000" })],
+          alignment: AlignmentType.CENTER
+        })],
+        width: { size: 15, type: WidthType.PERCENTAGE },
+        margins: cellMargin,
+        shading: { fill: "F3F4F6", color: "auto" }
+      }),
+      new TableCell({
+        children: [new Paragraph({
+          children: [new TextRun({ text: "PT. Y", bold: true, font: "Arial", size: headerSize, color: "000000" })],
+          alignment: AlignmentType.CENTER
+        })],
+        width: { size: 15, type: WidthType.PERCENTAGE },
+        margins: cellMargin,
+        shading: { fill: "F3F4F6", color: "auto" }
+      }),
+      new TableCell({
+        children: [new Paragraph({
+          children: [new TextRun({ text: "PT. Z", bold: true, font: "Arial", size: headerSize, color: "000000" })],
+          alignment: AlignmentType.CENTER
+        })],
+        width: { size: 15, type: WidthType.PERCENTAGE },
+        margins: cellMargin,
+        shading: { fill: "F3F4F6", color: "auto" }
+      })
+    ];
+
+    headerRows = [
+      new TableRow({ children: headerRow1Cells }),
+      new TableRow({ children: headerRow2Cells })
+    ];
+  } else {
+    // Standard single-row header for other formats
+    const headerCells = [
       new TableCell({ 
         children: [new Paragraph({ 
-          children: [new TextRun({ text: col.label, bold: true, font: "Arial", size: headerSize, color: "000000" })], 
+          children: [new TextRun({ text: "No.", bold: true, font: "Arial", size: headerSize, color: "000000" })], 
           alignment: AlignmentType.CENTER 
         })], 
-        width: { size: col.width, type: WidthType.PERCENTAGE }, 
+        width: { size: 5, type: WidthType.PERCENTAGE }, 
         margins: cellMargin, 
         shading: { fill: "F3F4F6", color: "auto" } // Light gray header
-      })
-    )
-  ];
+      }),
+      ...columns.map(col => 
+        new TableCell({ 
+          children: [new Paragraph({ 
+            children: [new TextRun({ text: col.label, bold: true, font: "Arial", size: headerSize, color: "000000" })], 
+            alignment: AlignmentType.CENTER 
+          })], 
+          width: { size: col.width, type: WidthType.PERCENTAGE }, 
+          margins: cellMargin, 
+          shading: { fill: "F3F4F6", color: "auto" } // Light gray header
+        })
+      )
+    ];
+    
+    headerRows = [new TableRow({ children: headerCells })];
+  }
 
   // Map section names to colors (order matters - check more specific first)
   const sectionColors: { [key: string]: string } = {
@@ -854,40 +1453,54 @@ function generateTpgTable(items: any[]): Table {
     'DOCUMENTS REQUIREMENT': 'ADD8E6'  // Light blue
   };
 
-  // Track section number (only for main sections)
-  let sectionNumber = 0;
-
   const rows = [
-    new TableRow({
-      children: headerCells,
-      // tableHeader: true, // Disabled to prevent header repetition causing table split
-    }),
+    ...headerRows,
     ...items.map((item, index) => {
-      // Check if this is a header row - works for both formats
-      const firstColumnKey = columns[0].key;
-      let firstFieldValue = item[firstColumnKey] || '';
+      // === ID-based header detection ===
+      // New format: Header IDs have no hyphen-letter pattern (e.g., "1", "1.1", "1.10")
+      // Data row IDs have hyphen-letter pattern (e.g., "1-a", "1.1-a", "1.10-a")
+      // Legacy format: Headers end with "-0" (e.g., "1-0", "1.1-0")
+      const itemId = item.id || "";
+      const hasHyphenLetter = /-[a-z]/.test(itemId);
+      const isLegacyHeader = itemId.endsWith('-0');
+      const isNewFormatHeader = itemId && !hasHyphenLetter && !isLegacyHeader && /^[\d.]+$/.test(itemId);
       
-      // Check if all data fields are missing (only description present)
-      // Arrester format: no specified/proposedGuarantee
-      // AVR format: no unit/required/proposedGuaranteed/remarks
-      const isHeaderRow = item.description && 
+      // Content-based fallback for templates without proper IDs
+      const isHeaderByContent = item.description && 
         !item.specified && !item.proposedGuarantee &&  // Arrester format
-        !item.unit && !item.required && !item.proposedGuaranteed && !item.remarks; // AVR format
+        (!item.unit || item.unit === '-') && !item.required && !item.proposedGuaranteed; // AVR format
       
-      const upperText = firstFieldValue.toUpperCase();
+      const isHeaderRow = isLegacyHeader || isNewFormatHeader || isHeaderByContent;
+      
+      // Get description text for section detection (handle description, specificationRequirements, and spec1 for Battery)
+      const descriptionText = (item.description || item.specificationRequirements || item.spec1 || '').toString();
+      const upperText = descriptionText.toUpperCase();
       
       // Check if this is a main section (case-insensitive)
       const isMainSection = upperText.includes("SPEC") || 
                            upperText.includes("INSPECTION") || 
-                           upperText.includes("DOCUMENTS");
+                           upperText.includes("DOCUMENTS") ||
+                           upperText.includes("GENERAL") ||
+                           upperText.includes("APPROVAL") ||
+                           upperText.includes("STATIONARY") ||
+                           upperText.includes("BATTERY") ||
+                           upperText.includes("ACCESSORIES") ||
+                           upperText.includes("MACHINE DATA") ||
+                           upperText.includes("FACTORY TEST") ||
+                           upperText.includes("TECHNICAL HIGHLIGHTS") ||
+                           upperText.includes("COMMISSIONING") ||
+                           upperText.includes("SUBMITTAL");
       
-      // Increment section number only for main sections
-      if (isHeaderRow && isMainSection) {
-        sectionNumber++;
+      // Get section number from item ID
+      let sectionNumber = "";
+      if (isLegacyHeader) {
+        sectionNumber = itemId.replace('-0', '');
+      } else if (isNewFormatHeader) {
+        sectionNumber = itemId;
       }
       
       // Determine section color based on text (check most specific first)
-      let sectionColor = "FFFFFF"; // default white
+      let sectionColor = "E0E0E0"; // default light gray for headers
       
       // Check for specific sections in order of specificity
       if (upperText.includes("SPEC ARRESTER")) {
@@ -902,14 +1515,14 @@ function generateTpgTable(items: any[]): Table {
         sectionColor = sectionColors['DOCUMENTS REQUIREMENT'];
       }
       
-      // For main section headers, create merged cell row
-      if (isHeaderRow && isMainSection) {
+      // For section headers, create merged cell row
+      if (isHeaderRow && (isMainSection || isNewFormatHeader || isLegacyHeader)) {
         return new TableRow({
           children: [
             new TableCell({
               children: [new Paragraph({
                 children: [new TextRun({
-                  text: sectionNumber.toString(),
+                  text: sectionNumber,
                   font: "Arial",
                   size: contentSize,
                   bold: true,
@@ -923,14 +1536,14 @@ function generateTpgTable(items: any[]): Table {
             new TableCell({
               children: [new Paragraph({
                 children: [new TextRun({
-                  text: cleanText,
+                  text: descriptionText,
                   font: "Arial",
                   size: contentSize,
                   bold: true,
                   color: "000000"
                 })]
               })],
-              columnSpan: 3, // Merge across all 3 data columns
+              columnSpan: columns.length, // Merge across all data columns
               margins: cellMargin,
               shading: { fill: sectionColor, color: "auto" }
             })
@@ -938,47 +1551,12 @@ function generateTpgTable(items: any[]): Table {
         });
       }
       
-      // For subsection headers (orange background, no merge)
-      if (isHeaderRow && !isMainSection) {
-        const cells = [
-          new TableCell({
-            children: [new Paragraph({
-              children: [new TextRun({
-                text: "",
-                font: "Arial",
-                size: contentSize
-              })],
-              alignment: AlignmentType.CENTER
-            })],
-            margins: cellMargin,
-            shading: { fill: sectionColor, color: "auto" }
-          }),
-          ...columns.map((col) =>
-            new TableCell({
-              children: [new Paragraph({
-                children: [new TextRun({
-                  text: item[col.key] ? item[col.key].replace(/===/g, '').trim() : "",
-                  font: "Arial",
-                  size: contentSize,
-                  bold: true,
-                  color: "000000"
-                })]
-              })],
-              margins: cellMargin,
-              shading: { fill: sectionColor, color: "auto" }
-            })
-          )
-        ];
-        
-        return new TableRow({ children: cells });
-      }
-      
-      // Regular detail rows - no number, no special formatting
+      // Regular data rows - no number in the No. column
       const cells = [
         new TableCell({
           children: [new Paragraph({
             children: [new TextRun({
-              text: "",
+              text: "", // Empty number cell for data rows
               font: "Arial",
               size: contentSize
             })],
@@ -986,19 +1564,132 @@ function generateTpgTable(items: any[]): Table {
           })],
           margins: cellMargin
         }),
-        ...columns.map((col) =>
-          new TableCell({
+        ...columns.map((col) => {
+          // For multi-column Battery format, create nested table for specificationRequirements column
+          if (isMultiColumnBattery && col.key === 'specificationRequirements') {
+            // Check if any spec fields have content
+            const hasSpec1 = item.spec1 && item.spec1.trim() !== "";
+            const hasSpec2 = item.spec2 && item.spec2.trim() !== "";
+            const hasSpec3 = item.spec3 && item.spec3.trim() !== "";
+            const hasSpec4 = item.spec4 && item.spec4.trim() !== "";
+            
+            // If all specs are empty, just return empty cell
+            if (!hasSpec1 && !hasSpec2 && !hasSpec3 && !hasSpec4) {
+              return new TableCell({
+                children: [new Paragraph({ children: [new TextRun({ text: "", font: "Arial", size: contentSize })] })],
+                margins: { top: 20, bottom: 20, left: 20, right: 20 }
+              });
+            }
+            
+            // Create nested table with spec1, spec2, spec3, spec4 as columns
+            const nestedTableRows: TableRow[] = [];
+            
+            // Single row with 4 columns (or less if some are empty)
+            const nestedCells: TableCell[] = [];
+            
+            // Only add cells for non-empty specs
+            if (hasSpec1) {
+              nestedCells.push(new TableCell({
+                children: [new Paragraph({
+                  children: [new TextRun({
+                    text: item.spec1 || "",
+                    font: "Arial",
+                    size: contentSize - 2, // Slightly smaller for nested content
+                    color: "000000"
+                  })]
+                })],
+                width: { size: 25, type: WidthType.PERCENTAGE },
+                margins: { top: 20, bottom: 20, left: 20, right: 20 }
+              }));
+            }
+            
+            if (hasSpec2) {
+              nestedCells.push(new TableCell({
+                children: [new Paragraph({
+                  children: [new TextRun({
+                    text: item.spec2 || "",
+                    font: "Arial",
+                    size: contentSize - 2,
+                    color: "000000"
+                  })]
+                })],
+                width: { size: 25, type: WidthType.PERCENTAGE },
+                margins: { top: 20, bottom: 20, left: 20, right: 20 }
+              }));
+            }
+            
+            if (hasSpec3) {
+              nestedCells.push(new TableCell({
+                children: [new Paragraph({
+                  children: [new TextRun({
+                    text: item.spec3 || "",
+                    font: "Arial",
+                    size: contentSize - 2,
+                    color: "000000"
+                  })]
+                })],
+                width: { size: 25, type: WidthType.PERCENTAGE },
+                margins: { top: 20, bottom: 20, left: 20, right: 20 }
+              }));
+            }
+            
+            if (hasSpec4) {
+              nestedCells.push(new TableCell({
+                children: [new Paragraph({
+                  children: [new TextRun({
+                    text: item.spec4 || "",
+                    font: "Arial",
+                    size: contentSize - 2,
+                    color: "000000"
+                  })]
+                })],
+                width: { size: 25, type: WidthType.PERCENTAGE },
+                margins: { top: 20, bottom: 20, left: 20, right: 20 }
+              }));
+            }
+            
+            nestedTableRows.push(new TableRow({ children: nestedCells }));
+            
+            const nestedTable = new Table({
+              rows: nestedTableRows,
+              width: { size: 100, type: WidthType.PERCENTAGE },
+              borders: {
+                top: { style: BorderStyle.SINGLE, size: 1, color: "CCCCCC" },
+                bottom: { style: BorderStyle.SINGLE, size: 1, color: "CCCCCC" },
+                left: { style: BorderStyle.SINGLE, size: 1, color: "CCCCCC" },
+                right: { style: BorderStyle.SINGLE, size: 1, color: "CCCCCC" },
+                insideHorizontal: { style: BorderStyle.SINGLE, size: 1, color: "CCCCCC" },
+                insideVertical: { style: BorderStyle.SINGLE, size: 1, color: "CCCCCC" },
+              }
+            });
+            
+            // Return cell containing the nested table
+            return new TableCell({
+              children: [nestedTable],
+              margins: { top: 0, bottom: 0, left: 0, right: 0 } // No margins for nested table cell
+            });
+          }
+          
+          // Regular cells for other columns
+          let cellValue = item[col.key] || "";
+          
+          // Remove "Harus diisi oleh vendor" placeholder text from export
+          if (typeof cellValue === 'string' && cellValue.trim() === "Harus diisi oleh vendor") {
+            cellValue = "";
+          }
+          
+          return new TableCell({
             children: [new Paragraph({
               children: [new TextRun({
-                text: item[col.key] || "",
+                text: cellValue,
                 font: "Arial",
                 size: contentSize,
                 color: "000000"
               })]
             })],
             margins: cellMargin
-          })
-        )
+          });
+        })
       ];
       
       return new TableRow({ children: cells });
@@ -2383,7 +3074,20 @@ new Paragraph({
               spacing: { before: 200, after: 100 },
             }),
             ...((tor.technicalParticulars && Array.isArray(tor.technicalParticulars) && tor.technicalParticulars.length > 0)
-              ? [generateTpgTable(tor.technicalParticulars)]
+              ? (() => {
+                  // Detect Battery template (has spec1 or vendorPTX fields)
+                  const isBatteryTemplate = tor.technicalParticulars.some((item: any) => 
+                    'spec1' in item || 'vendorPTX' in item
+                  );
+                  
+                  if (isBatteryTemplate) {
+                    // Use custom Battery table generator for exact layout
+                    return [generateBatteryTable()];
+                  } else {
+                    // Use generic TPG table for other templates (Arrester, AVR, etc.)
+                    return [generateTpgTable(tor.technicalParticulars)];
+                  }
+                })()
               : [new Paragraph({ text: "-", spacing: { after: 200 } })]),
 
             // 2. Inspection Testing Plan (ITP)
